@@ -1,0 +1,153 @@
+@import "tailwindcss";
+
+@theme {
+  --color-ember: #0D0A08;
+  --color-ember-card: #140F0D;
+  --color-ember-border: #281D18;
+  --color-maroon: #4A0E0E;
+  --color-maroon-dark: #2A0909;
+  --color-gold: #D9A441;
+  --color-gold-light: #F3CA6D;
+  --color-gold-dim: rgba(217, 164, 65, 0.15);
+  --color-ivory: #F5EFE4;
+  --color-ivory-dim: rgba(245, 239, 228, 0.65);
+  --color-sindoor: #C1272D;
+  
+  --font-display: 'Clash Display', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-serif: 'Fraunces', Georgia, serif;
+  --font-body: 'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+:root {
+  --ember: #0D0A08;
+  --maroon: #4A0E0E;
+  --gold: #D9A441;
+  --ivory: #F5EFE4;
+  --sindoor: #C1272D;
+}
+
+html {
+  scroll-behavior: smooth;
+  background-color: #0D0A08;
+  color: #F5EFE4;
+  font-family: 'Space Grotesk', sans-serif;
+}
+
+body {
+  background-color: #0D0A08;
+  overflow-x: hidden;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #0D0A08;
+}
+::-webkit-scrollbar-thumb {
+  background: #2D231E;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #D9A441;
+}
+
+/* Typography utilities */
+.font-display {
+  font-family: 'Clash Display', sans-serif;
+}
+.font-serif {
+  font-family: 'Fraunces', serif;
+}
+.font-body {
+  font-family: 'Space Grotesk', sans-serif;
+}
+
+/* Film Grain Overlay */
+.film-grain {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 999;
+  opacity: 0.038;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+}
+
+/* Subtle Glow Effects */
+.gold-glow {
+  box-shadow: 0 0 40px -8px rgba(217, 164, 65, 0.35);
+}
+.gold-glow-subtle {
+  box-shadow: 0 0 25px -5px rgba(217, 164, 65, 0.15);
+}
+.maroon-glow {
+  box-shadow: 0 0 50px -10px rgba(74, 14, 14, 0.5);
+}
+
+.text-gold-gradient {
+  background: linear-gradient(135deg, #FFF1D0 0%, #D9A441 55%, #9E7020 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.text-metallic-silver {
+  background: linear-gradient(180deg, #FFFFFF 0%, #E0D8CB 60%, #9B9488 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Infinite Marquee Animation */
+@keyframes marquee-scroll {
+  0% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-marquee {
+  display: flex;
+  width: max-content;
+  animation: marquee-scroll 28s linear infinite;
+}
+
+.animate-marquee:hover {
+  animation-play-state: paused;
+}
+
+/* Pulse breathing effect */
+@keyframes pulse-ring {
+  0% {
+    transform: scale(0.95);
+    opacity: 0.8;
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: 0.4;
+  }
+  100% {
+    transform: scale(0.95);
+    opacity: 0.8;
+  }
+}
+
+.animate-pulse-ring {
+  animation: pulse-ring 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Beat Flash on Step Sequencer */
+@keyframes beat-flash {
+  0% {
+    background-color: #D9A441;
+    transform: scale(1.08);
+  }
+  100% {
+    background-color: transparent;
+    transform: scale(1);
+  }
+}
