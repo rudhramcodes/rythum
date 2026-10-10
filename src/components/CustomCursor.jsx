@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 
 export const CustomCursor = () => {
   const [pos, setPos] = useState({ x: -100, y: -100 });

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { playCountInBeat, getAudioContext } from '../audio/dholSynth';
 import { Volume2, ArrowRight } from 'lucide-react';
 

@@ -1,5 +1,4 @@
-import React from 'react';
-import { Award, Star } from 'lucide-react';
+import { Star } from 'lucide-react';
 
 export const HonorsMarquee = () => {
   const honors = [
