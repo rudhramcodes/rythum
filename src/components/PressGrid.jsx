@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { memo, useEffect, useRef, useState } from 'react';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import './press.css';
@@ -84,7 +84,7 @@ function ChitralekhaFigure({ item, onOpenModal }) {
   );
 }
 
-export default function PressGrid({ items, preview = false }) {
+const PressGrid = memo(function PressGrid({ items, preview = false }) {
   const grid = useRef(null);
   const [modalImg, setModalImg] = useState(null);
   const Heading = preview ? 'h3' : 'h2';
@@ -92,16 +92,46 @@ export default function PressGrid({ items, preview = false }) {
   useEffect(() => {
     const media = gsap.matchMedia();
     media.add('(prefers-reduced-motion: no-preference)', () => {
-      gsap.utils.toArray('.press-card', grid.current).forEach(card => {
-        gsap.from(card, {
-          y: 24, opacity: 0, duration: 0.6, ease: 'power2.out',
-          scrollTrigger: { trigger: card, start: 'top 96%', once: true },
-          clearProps: 'transform,opacity',
-        });
-      });
+      const cards = gsap.utils.toArray('.press-card', grid.current);
+      if (!cards.length) return;
+
+      if (preview) {
+        // Homepage preview: trigger staggered cascade on scroll
+        gsap.fromTo(
+          cards,
+          { y: 32, opacity: 0 },
+          {
+            y: 0,
+            opacity: 1,
+            duration: 0.7,
+            stagger: 0.1,
+            ease: 'power3.out',
+            scrollTrigger: {
+              trigger: grid.current,
+              start: 'top 85%',
+              once: true,
+            },
+            clearProps: 'transform,opacity',
+          }
+        );
+      } else {
+        // Dedicated /press page: fluid staggered reveal on category switch
+        gsap.fromTo(
+          cards,
+          { y: 20, opacity: 0 },
+          {
+            y: 0,
+            opacity: 1,
+            duration: 0.45,
+            stagger: 0.035,
+            ease: 'power3.out',
+            clearProps: 'transform,opacity',
+          }
+        );
+      }
     });
     return () => media.revert();
-  }, [items]);
+  }, [items, preview]);
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -182,4 +212,6 @@ export default function PressGrid({ items, preview = false }) {
       )}
     </>
   );
-}
+});
+
+export default PressGrid;

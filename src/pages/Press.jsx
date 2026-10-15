@@ -1,11 +1,11 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import PressGrid from '../components/PressGrid';
 import { filterPress, pressFilters } from '../data/press';
 
 export default function Press() {
   const [filter, setFilter] = useState('All');
-  const items = filterPress(filter);
+  const items = useMemo(() => filterPress(filter), [filter]);
   const scrollRef = useRef(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
@@ -14,8 +14,10 @@ export default function Press() {
     const el = scrollRef.current;
     if (!el) return;
     const { scrollLeft, scrollWidth, clientWidth } = el;
-    setCanScrollLeft(scrollLeft > 4);
-    setCanScrollRight(scrollLeft + clientWidth < scrollWidth - 4);
+    const left = scrollLeft > 4;
+    const right = scrollLeft + clientWidth < scrollWidth - 4;
+    setCanScrollLeft(prev => prev !== left ? left : prev);
+    setCanScrollRight(prev => prev !== right ? right : prev);
   };
 
   useEffect(() => {
