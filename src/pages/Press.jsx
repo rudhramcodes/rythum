@@ -105,7 +105,7 @@ export default function Press() {
       </div>
 
       <p className="press-results-count" role="status" aria-live="polite" aria-atomic="true">
-        {items.length} {items.length === 1 ? 'item' : 'items'} · {filter} · Newest first
+        {items.length} {items.length === 1 ? 'item' : 'items'} · {filter}
       </p>
       <div id="press-results">
         <PressGrid items={items} />
