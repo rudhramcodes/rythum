@@ -39,7 +39,7 @@ test('filters preserve newest-first order and do not turn unverified features in
   assert.deepEqual(pressFilters.map(filter => filterPress(filter).length), [17, 2, 7, 7, 1]);
   assert.deepEqual(filterPress('Print').map(item => item.id), ['chitralekha']);
   assert.deepEqual(sortedPress.map(item => item.id), [
-    'ahmedabad-mirror', 'chitralekha', 'us-insider', 'shoutout-la',
+    'chitralekha', 'ahmedabad-mirror', 'us-insider', 'shoutout-la',
     'indian-business-times', 'india-west', 'bollywood-mascot', 'time-bulletin', 'ed-times',
     'business-standard', 'voyage-la', 'la-wire', 'the-indian-eye', 'reflections-live',
     'asian-news', 'business-upturn', 'filmy-charcha',

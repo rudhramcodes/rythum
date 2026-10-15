@@ -140,6 +140,10 @@ export const pressItems = [
 
 export const pressFilters = ['All', 'Interviews', 'Features', 'Concert Coverage', 'Print'];
 export const featuredPress = pressItems.filter(item => item.featured);
-// Partial ISO dates sort after more precise dates in the same period, without inventing a day.
-export const sortedPress = [...pressItems].sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+// Chitralekha is the flagship hero cover story pinned at the 1st position, followed by articles sorted newest-first.
+const chitralekhaStory = pressItems.find(item => item.id === 'chitralekha');
+const chronologicalPress = pressItems
+  .filter(item => item.id !== 'chitralekha')
+  .sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+export const sortedPress = chitralekhaStory ? [chitralekhaStory, ...chronologicalPress] : chronologicalPress;
 export const filterPress = filter => sortedPress.filter(item => filter === 'All' || item.type === filter);
