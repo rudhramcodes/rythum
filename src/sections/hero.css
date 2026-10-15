@@ -1,0 +1,309 @@
+/* ==========================================================================
+   Hero Section: Scroll-to-Expand Cinematic Reel
+   ========================================================================== */
+
+.hero-scroll-wrap {
+  position: relative;
+  width: 100%;
+  background: #0a0c0a;
+}
+
+.hero-pinned-stage {
+  position: relative;
+  width: 100%;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding-top: 92px;
+  background: #0a0c0a;
+}
+
+/* Ambient glow behind the video frame */
+.hero-ambient-glow {
+  position: absolute;
+  top: 65%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(85vw, 1000px);
+  height: min(48vh, 520px);
+  background: radial-gradient(circle, rgba(207, 219, 157, 0.13) 0%, rgba(207, 219, 157, 0.03) 45%, transparent 72%);
+  filter: blur(70px);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Intro Text Block */
+.hero-intro {
+  position: relative;
+  z-index: 10;
+  text-align: center;
+  max-width: min(92vw, 1140px);
+  margin: 0 auto 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  will-change: transform, opacity;
+}
+
+.hero-title {
+  font-family: var(--font-display);
+  font-size: clamp(46px, 7.5vw, 104px);
+  font-weight: 600;
+  line-height: .92;
+  letter-spacing: -.045em;
+  margin: 0 0 12px;
+  color: #eeefeb;
+}
+
+.hero-title span {
+  color: var(--accent);
+}
+
+.hero-tagline {
+  font-size: clamp(14.5px, 1.4vw, 18px);
+  color: #b7bcae;
+  max-width: 600px;
+  margin: 0 0 18px;
+  line-height: 1.45;
+}
+
+.hero-actions-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 22px;
+  flex-wrap: wrap;
+}
+
+/* Cinematic Video Frame (Placed cleanly below the intro buttons) */
+.hero-video-frame {
+  position: absolute;
+  top: 67%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(88vw, 1120px);
+  height: min(46vh, 540px);
+  border-radius: 20px;
+  overflow: hidden;
+  border: 1px solid rgba(207, 219, 157, 0.28);
+  box-shadow: 0 32px 90px rgba(0, 0, 0, 0.85), 0 0 50px rgba(207, 219, 157, 0.08);
+  background: #0d0f0c;
+  z-index: 5;
+  will-change: width, height, border-radius, transform, top;
+}
+
+.hero-video-element {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 32%;
+  display: block;
+}
+
+.hero-video-shade {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(10, 12, 10, 0.15) 0%, rgba(10, 12, 10, 0.03) 40%, rgba(10, 12, 10, 0.75) 100%);
+  pointer-events: none;
+}
+
+/* Floating Controls Bar: Left: Play/Pause, Right: Sound Toggle */
+.hero-frame-bar {
+  position: absolute;
+  bottom: 20px;
+  left: 22px;
+  right: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  z-index: 8;
+  pointer-events: none;
+}
+
+.hero-frame-bar > * {
+  pointer-events: auto;
+}
+
+.hero-sound-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--accent);
+  color: #15180e;
+  border: 0;
+  border-radius: 999px;
+  padding: 8px 18px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+  transition: all .2s ease;
+}
+
+.hero-sound-toggle:hover {
+  background: #e2ecc2;
+  transform: scale(1.04);
+}
+
+/* Animated Sound Wave Bars */
+.sound-wave {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 2.5px;
+  height: 14px;
+}
+
+.sound-bar {
+  width: 2.5px;
+  height: 4px;
+  background: #15180e;
+  border-radius: 2px;
+  transition: height .15s ease;
+}
+
+.sound-wave.is-live .sound-bar:nth-child(1) {
+  animation: soundEq 0.75s ease-in-out infinite alternate;
+}
+.sound-wave.is-live .sound-bar:nth-child(2) {
+  animation: soundEq 1.05s ease-in-out infinite 0.2s alternate;
+}
+.sound-wave.is-live .sound-bar:nth-child(3) {
+  animation: soundEq 0.85s ease-in-out infinite 0.4s alternate;
+}
+.sound-wave.is-live .sound-bar:nth-child(4) {
+  animation: soundEq 1.15s ease-in-out infinite 0.1s alternate;
+}
+
+@keyframes soundEq {
+  0% { height: 3px; }
+  100% { height: 14px; }
+}
+
+.hero-play-pause {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(18, 22, 16, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  color: #eeefeb;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: all .2s ease;
+}
+
+.hero-play-pause:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  transform: scale(1.08);
+}
+
+/* Cinematic Full-bleed Overlay Caption (Positioned above bottom controls) */
+.hero-cinema-caption {
+  position: absolute;
+  bottom: clamp(84px, 13vh, 120px);
+  left: 50%;
+  transform: translateX(-50%);
+  text-align: center;
+  z-index: 10;
+  opacity: 0;
+  pointer-events: none;
+  width: min(92vw, 860px);
+  will-change: transform, opacity;
+}
+
+.hero-cinema-caption h2 {
+  font-family: var(--font-display);
+  font-size: clamp(26px, 3.8vw, 52px);
+  line-height: 1.1;
+  color: #ffffff;
+  margin: 0 0 10px;
+  text-shadow: 0 4px 28px rgba(0, 0, 0, 0.9);
+}
+
+.hero-cinema-caption p {
+  font-size: clamp(14px, 1.35vw, 17px);
+  color: var(--accent);
+  margin: 0;
+  text-shadow: 0 2px 14px rgba(0, 0, 0, 0.85);
+  font-weight: 500;
+}
+
+.hero-scroll-prompt {
+  margin-top: 14px;
+  font-size: 11.5px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: rgba(238, 239, 235, 0.65);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 900px) {
+  .hero-pinned-stage {
+    padding-top: 112px; /* Generous breathing room below navbar */
+  }
+
+  .hero-video-frame {
+    top: 69%;
+    width: 92vw;
+    height: min(42vh, 440px);
+  }
+
+  .hero-title {
+    font-size: clamp(38px, 9vw, 68px);
+    margin-bottom: 8px;
+  }
+}
+
+@media (max-width: 600px) {
+  .hero-pinned-stage {
+    padding-top: 122px; /* Clean 40px space below 82px mobile navbar */
+  }
+
+  .hero-video-frame {
+    top: 71%;
+    width: 92vw;
+    height: min(38vh, 340px);
+    border-radius: 14px;
+  }
+
+  .hero-title {
+    font-size: clamp(36px, 11vw, 54px);
+    margin-bottom: 8px;
+  }
+
+  .hero-tagline {
+    font-size: 13.5px;
+    margin-bottom: 14px;
+  }
+
+  .hero-actions-row {
+    gap: 14px;
+  }
+
+  /* Ergonomic two-thumb controls across bottom of mobile screen */
+  .hero-frame-bar {
+    bottom: 14px;
+    left: 14px;
+    right: 14px;
+  }
+
+  .hero-sound-toggle {
+    padding: 7px 15px;
+    font-size: 12.5px;
+  }
+
+  .hero-play-pause {
+    width: 36px;
+    height: 36px;
+  }
+}
