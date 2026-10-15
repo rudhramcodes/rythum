@@ -18,14 +18,14 @@
   flex-direction: column;
   align-items: center;
   justify-content: flex-start;
-  padding-top: 92px;
+  padding-top: clamp(122px, 14vh, 138px); /* Clean breathing room below 82px navbar */
   background: #0a0c0a;
 }
 
 /* Ambient glow behind the video frame */
 .hero-ambient-glow {
   position: absolute;
-  top: 65%;
+  top: 66%;
   left: 50%;
   transform: translate(-50%, -50%);
   width: min(85vw, 1000px);
@@ -82,11 +82,11 @@
 /* Cinematic Video Frame (Placed cleanly below the intro buttons) */
 .hero-video-frame {
   position: absolute;
-  top: 67%;
+  top: 70%;
   left: 50%;
   transform: translate(-50%, -50%);
   width: min(88vw, 1120px);
-  height: min(46vh, 540px);
+  height: min(44vh, 520px);
   border-radius: 20px;
   overflow: hidden;
   border: 1px solid rgba(207, 219, 157, 0.28);
