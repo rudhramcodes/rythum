@@ -24,3 +24,6 @@ dist-ssr
 *.sw?
 MD
 .agents
+.playwright-cli
+.taste-skill
+MD
