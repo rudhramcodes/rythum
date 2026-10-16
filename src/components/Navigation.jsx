@@ -1,11 +1,26 @@
 import { useState, useEffect, useRef } from 'react';
 import { Menu, X, ArrowUpRight } from 'lucide-react';
+import { updateNavScroll } from './navScroll.js';
 const links = [['Music', '#music'], ['Live', '#tour'], ['Videos', '#videos'], ['About', '#craft'], ['Pulse Lab', '#pulse-lab'], ['Press', '/press']];
 export default function Navigation({ homePrefix = '' }) {
   const destination = href => href.startsWith('#') ? homePrefix + href : href;
   const [open, setOpen] = useState(false);
+  const [scroll, setScroll] = useState({ hidden: false, scrolled: false });
+  const header = useRef(null);
   const toggle = useRef(null);
   const panel = useRef(null);
+  useEffect(() => {
+    let state = { anchor: window.scrollY, hidden: false, scrolled: false };
+    const onScroll = () => {
+      const max = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
+      state = updateNavScroll(state, window.scrollY, max, header.current?.offsetHeight ?? 82);
+      setScroll(previous => previous.hidden === state.hidden && previous.scrolled === state.scrolled
+        ? previous : { hidden: state.hidden, scrolled: state.scrolled });
+    };
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
   useEffect(() => {
     if (!open) return;
     const previous = document.body.style.overflow;
@@ -24,7 +39,7 @@ export default function Navigation({ homePrefix = '' }) {
     document.addEventListener('keydown', keydown);
     return () => { document.body.style.overflow = previous; document.removeEventListener('keydown', keydown); trigger?.focus(); };
   }, [open]);
-  return <header className="site-header">
+  return <header ref={header} className={`site-header${scroll.scrolled ? ' is-scrolled' : ''}${scroll.hidden && !open ? ' is-hidden' : ''}`}>
     <div className="header-inner">
       <a href={destination('#home')} className="wordmark" aria-label="Rythum Shastri home">RYTHUM SHASTRI<span className="brand-period">.</span></a>
       <nav className="desktop-nav" aria-label="Main navigation">{links.map(([label, href]) => <a key={href} href={destination(href)} aria-current={href === '/press' && homePrefix ? 'page' : undefined}>{label}</a>)}</nav>

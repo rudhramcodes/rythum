@@ -36,7 +36,10 @@ p { line-height: 1.65; }
 .button-solid:hover { background: #e2ecc2; }
 .skip-link { position: fixed; left: 20px; top: -80px; padding: 12px; background: var(--accent); color: #101110; z-index: 200; }
 .skip-link:focus { top: 12px; }
-.site-header { position: absolute; top: 0; inset-inline: 0; z-index: 50; border-bottom: 1px solid #ffffff24; }
+.site-header { position: fixed; top: 0; inset-inline: 0; z-index: 50; border-bottom: 1px solid #ffffff24; transition: transform .25s cubic-bezier(.22, 1, .36, 1); }
+.site-header.is-scrolled { background: #101110; }
+.site-header.is-hidden { transform: translateY(-100%); pointer-events: none; }
+.site-header:has(:focus-visible) { transform: translateY(0); pointer-events: auto; transition: none; }
 .header-inner { display: flex; align-items: center; gap: 36px; height: 82px; width: min(100% - 112px, 1328px); margin: auto; }
 .wordmark { font-size: 19px; font-weight: 600; letter-spacing: -.035em; white-space: nowrap; }
 .brand-period { color: var(--accent); }
