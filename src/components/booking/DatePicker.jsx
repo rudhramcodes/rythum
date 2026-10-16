@@ -59,8 +59,8 @@ export default function DatePicker({ value, onChange, error }) {
     </button>
     <p id="booking-date-help" className="booking-field-help">Optional · Today or a future date</p>
     {error && <p id="booking-date-error" className="booking-field-error" role="alert">{error}</p>}
-    {open && <dialog ref={dialog} className="booking-date-dialog" aria-labelledby="booking-date-title" onCancel={() => setOpen(false)} onClick={event => { if (event.target === dialog.current) setOpen(false); }}>
-      <div className="booking-date-panel">
+    {open && <dialog ref={dialog} data-lenis-prevent className="booking-date-dialog" aria-labelledby="booking-date-title" onCancel={() => setOpen(false)} onClick={event => { if (event.target === dialog.current) setOpen(false); }}>
+      <div className="booking-date-panel" data-lenis-prevent>
         <div className="date-sheet-handle" aria-hidden="true" />
         <div className="date-picker-heading"><div><h3 id="booking-date-title">Your event date</h3><p>{draft ? formatDate(draft) : 'Find a day that works for you.'}</p></div><button type="button" className="date-icon-button" aria-label="Close date picker" onClick={() => setOpen(false)}><X size={20} /></button></div>
         <div className="date-month-controls">

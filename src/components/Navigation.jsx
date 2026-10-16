@@ -46,6 +46,6 @@ export default function Navigation({ homePrefix = '' }) {
       <a className="header-book" href={destination('#booking')}>Bookings <ArrowUpRight size={15} /></a>
       <button className="menu-toggle" ref={toggle} aria-expanded={open} aria-controls="mobile-nav" aria-label={open ? 'Close menu' : 'Open menu'} onClick={() => setOpen(!open)}>{open ? <X /> : <Menu />}</button>
     </div>
-    {open && <nav ref={panel} id="mobile-nav" className="mobile-nav" aria-label="Mobile navigation">{[...links, ['Legacy', '#legacy'], ['Bookings', '#booking']].map(([label, href]) => <a href={destination(href)} key={href} aria-current={href === '/press' && homePrefix ? 'page' : undefined} onClick={() => setOpen(false)}>{label}<ArrowUpRight size={24} /></a>)}</nav>}
+    {open && <nav ref={panel} id="mobile-nav" className="mobile-nav" data-lenis-prevent aria-label="Mobile navigation">{[...links, ['Legacy', '#legacy'], ['Bookings', '#booking']].map(([label, href]) => <a href={destination(href)} key={href} aria-current={href === '/press' && homePrefix ? 'page' : undefined} onClick={() => setOpen(false)}>{label}<ArrowUpRight size={24} /></a>)}</nav>}
   </header>;
 }

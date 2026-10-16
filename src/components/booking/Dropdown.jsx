@@ -41,7 +41,7 @@ export default function Dropdown({ id, label, value, options, onChange, name }) 
     <button id={id} ref={trigger} type="button" className="booking-control" role="combobox" aria-label={label} aria-expanded={open} aria-controls={listId} aria-haspopup="listbox" aria-activedescendant={open ? `${listId}-${active}` : undefined} onKeyDown={keydown} onClick={() => open ? setOpen(false) : show()}>
       {options[selected]?.label}<ChevronDown size={18} className={open ? 'dropdown-chevron is-open' : 'dropdown-chevron'} />
     </button>
-    {open && <div id={listId} role="listbox" aria-label={label} className="booking-options">
+    {open && <div id={listId} role="listbox" aria-label={label} className="booking-options" data-lenis-prevent>
       {options.map((option, index) => <div key={option.value} id={`${listId}-${index}`} role="option" aria-selected={value === option.value} data-active={active === index} onPointerMove={() => setActive(index)} onPointerDown={event => event.preventDefault()} onClick={() => choose(index)}>
         <span>{option.label}</span>{value === option.value && <Check size={17} />}
       </div>)}

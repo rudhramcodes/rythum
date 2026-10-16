@@ -1,11 +1,17 @@
 import { useEffect, useRef } from 'react';
 import gsap from 'gsap';
 
-export default function SmoothField({ multiline = false, ...props }) {
+export default function SmoothField({ multiline = false, error = '', type, id, ...props }) {
   const field = useRef(null);
   const caret = useRef(null);
   const mirror = useRef(null);
   const Field = multiline ? 'textarea' : 'input';
+
+  // Browsers block selectionStart on input[type="email"], disabling smooth caret calculation.
+  // Using type="text" with inputMode="email" provides full selection API access while preserving mobile email keyboards.
+  const isEmail = type === 'email';
+  const resolvedType = isEmail ? 'text' : type;
+  const resolvedInputMode = isEmail ? (props.inputMode || 'email') : props.inputMode;
 
   useEffect(() => {
     const input = field.current;
@@ -13,9 +19,10 @@ export default function SmoothField({ multiline = false, ...props }) {
     const marker = document.createElement('span');
     const measurement = mirror.current;
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
+
     function update() {
-      const start = input.selectionStart;
-      // Email inputs do not expose selection positions; keep their native caret accurate.
+      let start = null;
+      try { start = input.selectionStart; } catch { start = null; }
       const custom = start !== null && !reduced.matches;
       input.classList.toggle('has-smooth-caret', custom);
       const focused = document.activeElement === input;
@@ -36,26 +43,39 @@ export default function SmoothField({ multiline = false, ...props }) {
       caretElement.style.opacity = x >= 0 && x < input.clientWidth && y >= 0 && y < input.clientHeight ? '1' : '0';
       gsap.to(caretElement, { x, y, duration: 0.14, ease: 'power3.out', overwrite: true });
     }
+
     const events = ['input', 'focus', 'blur', 'select', 'keyup', 'pointerup', 'scroll', 'compositionend'];
     events.forEach(event => input.addEventListener(event, update));
     document.addEventListener('selectionchange', update);
-    document.fonts.addEventListener('loadingdone', update);
+    document.fonts?.addEventListener?.('loadingdone', update);
     reduced.addEventListener('change', update);
     const resize = new ResizeObserver(update);
     resize.observe(input);
+
     return () => {
       events.forEach(event => input.removeEventListener(event, update));
       document.removeEventListener('selectionchange', update);
-      document.fonts.removeEventListener('loadingdone', update);
+      document.fonts?.removeEventListener?.('loadingdone', update);
       reduced.removeEventListener('change', update);
       resize.disconnect();
       gsap.killTweensOf(caretElement);
     };
-  }, [multiline]);
+  }, [multiline, resolvedType]);
 
-  return <div className="smooth-field">
-    <Field {...props} ref={field} />
-    <span ref={mirror} className="smooth-field-mirror" aria-hidden="true" />
-    <span ref={caret} className="smooth-field-caret" aria-hidden="true" />
+  return <div className="smooth-field-wrapper">
+    <div className={`smooth-field${error ? ' is-invalid' : ''}`}>
+      <Field
+        {...props}
+        id={id}
+        type={resolvedType}
+        inputMode={resolvedInputMode}
+        ref={field}
+        aria-invalid={Boolean(error)}
+        aria-describedby={error && id ? `${id}-error` : props['aria-describedby']}
+      />
+      <span ref={mirror} className="smooth-field-mirror" aria-hidden="true" />
+      <span ref={caret} className="smooth-field-caret" aria-hidden="true" />
+    </div>
+    {error && id && <p id={`${id}-error`} className="booking-field-error" role="alert">{error}</p>}
   </div>;
 }
