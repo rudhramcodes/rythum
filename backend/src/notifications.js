@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import nodemailer from 'nodemailer';
+import { renderCustomerEmail, renderTeamEmail } from './emailTemplate.js';
 
 export async function queueNotifications(db) {
   const inquiries = db.collection('inquiries');
@@ -11,6 +12,15 @@ export async function queueNotifications(db) {
       try {
         await jobs.updateOne({ dedupeKey }, { $setOnInsert: {
           ...recipient, inquiryId: inquiry._id, reference: inquiry.reference,
+          inquiryDetails: {
+            name: inquiry.name,
+            email: inquiry.email,
+            phone: inquiry.phone,
+            eventType: inquiry.eventType,
+            city: inquiry.city,
+            date: inquiry.date,
+            details: inquiry.details,
+          },
           dedupeKey, status: 'pending', attempts: 0, nextAttemptAt: inquiry.createdAt, createdAt: inquiry.createdAt,
         } }, { upsert: true });
       } catch (error) {
@@ -56,17 +66,18 @@ export async function deliverNextJob(db, transport, config, now = new Date()) {
   }, { sort: { nextAttemptAt: 1 }, returnDocument: 'after' });
   if (!job) return false;
   const customer = job.kind === 'acknowledgement';
+  const inquiryData = job.inquiryDetails || (await db.collection('inquiries').findOne({ _id: job.inquiryId })) || { reference: job.reference };
+  const template = customer ? renderCustomerEmail(inquiryData) : renderTeamEmail(inquiryData);
   let outcome;
   try {
     const result = await transport.sendMail({
       from: { name: 'Rythum Shastri', address: config.MAIL_FROM },
-      replyTo: config.MAIL_REPLY_TO,
+      replyTo: customer ? config.MAIL_REPLY_TO : (inquiryData.email || config.MAIL_REPLY_TO),
       to: job.to,
       messageId: `<${job._id}@${config.MAIL_FROM.split('@')[1]}>`,
-      subject: customer ? `Inquiry received · ${job.reference}` : `New website inquiry · ${job.reference}`,
-      text: customer
-        ? `We received an inquiry using this email address.\n\nReference: ${job.reference}\n\nThis acknowledges receipt only; it does not confirm a booking. Our team will review the inquiry.\n\nIf you did not submit this inquiry, you can ignore this email.\n\nRythum Shastri & team`
-        : `A website inquiry has been saved.\n\nReference: ${job.reference}\n\nThis is a new inquiry, not a confirmed booking.`,
+      subject: template.subject,
+      text: template.text,
+      html: template.html,
     });
     outcome = result.accepted?.length
       ? { status: 'sent', acceptedAt: now }
