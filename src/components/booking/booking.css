@@ -1,0 +1,78 @@
+.booking-form { --field-ground: #14170f; --field-surface: #242b1d; --field-border: #3a4131; --field-ink: #eeefeb; }
+.booking-form .form-grid > * { min-width: 0; }
+.booking-form label { font-size: 14px; line-height: 1.5; }
+.booking-form .smooth-field { position: relative; margin-top: 10px; overflow: hidden; border-radius: 14px; }
+.booking-form .smooth-field input, .booking-form .smooth-field textarea, .booking-control {
+  width: 100%; min-height: 54px; margin: 0; padding: 16px; border: 1px solid var(--field-border); border-radius: 14px;
+  color: var(--field-ink); background: var(--field-ground); font-size: 16px; line-height: 1.4;
+  transition: border-color .2s, background .2s; outline: none;
+}
+.booking-form .smooth-field:focus-within, .booking-control:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.booking-form .smooth-field:focus-within input, .booking-form .smooth-field:focus-within textarea, .booking-control:hover { border-color: var(--accent); background: #1a2014; }
+.booking-form input.has-smooth-caret, .booking-form textarea.has-smooth-caret { caret-color: transparent; }
+.booking-form input { caret-color: var(--accent); }
+.booking-form .smooth-field textarea { display: block; min-height: 148px; }
+.smooth-field-mirror { position: absolute; top: 0; left: 0; visibility: hidden; pointer-events: none; border-style: solid; }
+.booking-form .smooth-field-caret { position: absolute; top: 0; left: 0; width: 2px; background: var(--accent); border-radius: 1px; pointer-events: none; opacity: 0; }
+.booking-dropdown { position: relative; min-width: 0; }
+.booking-field > .booking-dropdown, .booking-date { margin-top: 10px; }
+.booking-control { display: flex; justify-content: space-between; align-items: center; gap: 12px; text-align: left; }
+.booking-control svg { flex-shrink: 0; color: var(--accent); }
+.dropdown-chevron { transition: transform .2s; }
+.dropdown-chevron.is-open { transform: rotate(180deg); }
+.booking-options {
+  position: absolute; top: calc(100% + 8px); left: 0; width: max-content; min-width: 100%; max-width: min(340px, 85vw); max-height: 260px;
+  overflow-y: auto; overscroll-behavior: contain; padding: 6px; border: 1px solid var(--field-border); border-radius: 16px;
+  background: #1c2217; box-shadow: 0 16px 48px #0006; z-index: 10; animation: booking-pop-in .18s ease-out; scrollbar-width: thin; scrollbar-color: var(--accent) transparent;
+}
+.booking-options [role="option"] { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 46px; padding: 12px; border-radius: 10px; font-size: 14px; cursor: pointer; }
+.booking-options [role="option"][data-active="true"] { background: var(--field-surface); }
+.booking-options [role="option"][aria-selected="true"] { color: var(--accent); }
+.booking-options [role="option"] svg { flex-shrink: 0; }
+.booking-date .is-placeholder { color: #8e9684; }
+.booking-form .booking-field-help, .booking-form .booking-field-error { margin: 9px 0 0; font-size: 12px; line-height: 1.5; color: var(--muted); }
+.booking-form .booking-field-error { color: #f2ac9b; }
+.booking-date-dialog { padding: 0; border: 1px solid var(--field-border); border-radius: 28px; width: min(420px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); margin: auto; color: var(--field-ink); background: #1b2116; overflow: visible; box-shadow: 0 24px 100px #0008; }
+.booking-date-dialog::backdrop { background: #080c08b3; }
+.booking-date-panel { padding: 24px; max-height: calc(100dvh - 34px); overflow-y: auto; border-radius: inherit; scrollbar-width: thin; }
+.booking-date-dialog[open] { animation: booking-pop-in .22s ease-out; }
+.date-sheet-handle { display: none; }
+.date-picker-heading { display: flex; justify-content: space-between; align-items: start; gap: 16px; margin-bottom: 24px; }
+.date-picker-heading h3 { margin: 0 0 6px; font-size: 24px; font-weight: 500; letter-spacing: -.025em; }
+.date-picker-heading p { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.5; }
+.date-icon-button { display: grid; place-items: center; flex-shrink: 0; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 50%; background: var(--field-surface); }
+.date-icon-button:hover:not(:disabled) { background: #35412b; }
+.date-month-controls { display: grid; grid-template-columns: 36px minmax(0, 1.3fr) minmax(0, 1fr) 36px; gap: 6px; align-items: center; margin-bottom: 18px; }
+.date-month-controls .date-icon-button { width: 36px; height: 44px; background: none; }
+.date-month-controls .booking-control { min-height: 44px; font-size: 14px; padding: 10px; border: 0; background: var(--field-surface); border-radius: 10px; gap: 4px; }
+.date-month-controls .booking-options { max-height: 190px; min-width: 100%; max-width: 200px; }
+.date-month-controls .booking-options [role="option"] { min-height: 44px; }
+.date-calendar { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+.date-weekday { display: grid; place-items: center; height: 32px; font-size: 13px; color: var(--muted); }
+.date-day { display: grid; place-items: center; min-height: 44px; padding: 0; border: 0; border-radius: 50%; color: var(--field-ink); background: none; font-size: 16px; font-variant-numeric: tabular-nums; transition: background .18s, transform .18s; }
+.date-day:hover:not(:disabled) { background: #35412b; }
+.date-day:active:not(:disabled) { transform: scale(.92); }
+.date-day.is-today { color: var(--accent); font-weight: 700; }
+.date-day.is-selected, .date-day.is-selected:hover { background: var(--accent); color: #15180e; font-weight: 700; }
+.date-day:disabled, .date-icon-button:disabled { opacity: .25; cursor: not-allowed; }
+.date-shortcuts { display: flex; justify-content: space-between; gap: 16px; margin-top: 16px; }
+.date-shortcuts button { padding: 10px 4px; min-height: 44px; border: 0; color: var(--accent); background: none; font-size: 14px; }
+.booking-form .date-done { width: 100%; margin-top: 16px; border-radius: 999px; font-size: 16px; }
+.date-done:disabled { opacity: .35; cursor: not-allowed; }
+@keyframes booking-pop-in { from { opacity: 0; transform: translateY(8px) scale(.98); } to { opacity: 1; transform: none; } }
+@media (max-width: 480px) {
+  .booking-date-dialog { width: 100%; max-width: 100%; max-height: calc(100dvh - 20px); margin: auto 0 0; border-radius: 28px 28px 0 0; border-bottom: 0; }
+  .booking-date-panel { padding: 12px 20px max(20px, env(safe-area-inset-bottom)); max-height: calc(100dvh - 20px); }
+  .date-sheet-handle { display: block; width: 36px; height: 5px; margin: 0 auto 22px; border-radius: 999px; background: #58634e; }
+  .date-calendar { gap: 2px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .booking-form input.has-smooth-caret, .booking-form textarea.has-smooth-caret { caret-color: var(--accent); }
+  .booking-form .smooth-field-caret { display: none; }
+  .booking-date-dialog[open], .booking-options { animation: none; }
+}
+@media (forced-colors: active) {
+  .booking-form input.has-smooth-caret, .booking-form textarea.has-smooth-caret { caret-color: auto; }
+  .booking-form .smooth-field-caret { display: none; }
+  .date-day.is-selected { outline: 2px solid Highlight; }
+}
