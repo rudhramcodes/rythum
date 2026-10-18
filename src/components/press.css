@@ -247,6 +247,7 @@
 }
 
 .press-switch-btn {
+  min-height: 44px;
   position: relative;
   z-index: 2;
   background: transparent !important;
@@ -277,6 +278,7 @@
 }
 
 .press-zoom-btn {
+  min-height: 44px;
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -401,8 +403,8 @@
   background: #181b16;
   border: 1px solid var(--line);
   color: #eeefeb;
-  width: 38px;
-  height: 38px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   font-size: 16px;
   display: grid;
@@ -425,8 +427,6 @@
 /* Press Page Specifics */
 .press-view-all {
   margin-top: 48px;
-  min-width: 240px;
-  font-size: 15px;
 }
 
 .press-page {
@@ -509,8 +509,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   background: #181b16;
   border: 1px solid #34392e;
@@ -555,7 +555,7 @@
   white-space: nowrap;
   border: 1px solid var(--line);
   border-radius: 999px;
-  padding: 10px 22px;
+  padding: 11px 20px;
   min-height: 44px;
   background: #181b16;
   color: #eeefeb;
@@ -660,8 +660,8 @@
   }
 
   .press-filters button {
-    padding-inline: 16px;
-    font-size: 14px;
+    padding-inline: 18px;
+    font-size: 15px;
   }
 
   .press-view-all {

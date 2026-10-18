@@ -129,6 +129,7 @@
 }
 
 .hero-sound-toggle {
+  min-height: 44px;
   display: inline-flex;
   align-items: center;
   gap: 10px;
@@ -184,8 +185,8 @@
 }
 
 .hero-play-pause {
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   background: rgba(18, 22, 16, 0.85);
   border: 1px solid rgba(255, 255, 255, 0.18);
@@ -303,7 +304,7 @@
   }
 
   .hero-play-pause {
-    width: 36px;
-    height: 36px;
+    width: 44px;
+    height: 44px;
   }
 }

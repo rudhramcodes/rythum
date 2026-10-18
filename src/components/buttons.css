@@ -1,0 +1,70 @@
+/* Shared control typography and feedback; form fields retain their native sizing. */
+:root {
+  --control-ease: cubic-bezier(.22, 1, .36, 1);
+  --control-highlight: #e2ecc2;
+}
+
+:is(.button, .text-link, .header-book, .hero-sound-toggle, .press-filters button, .press-switch-btn, .press-zoom-btn, .preset-controls button, .date-shortcuts button) {
+  font-family: var(--font-display);
+  font-weight: 500;
+  letter-spacing: 0;
+  transition: translate .32s var(--control-ease), scale .2s var(--control-ease), background-color .25s ease, color .25s ease, border-color .25s ease;
+}
+
+.text-link, .preset-controls button, .press-switch-btn, .press-zoom-btn, .date-shortcuts button { font-size: 15px; }
+.hero-sound-toggle { font-size: 14px; padding-inline: 18px; }
+.press-switch-btn.is-active { font-weight: 500; }
+
+.button-solid {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+}
+
+.button-solid::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: var(--control-highlight);
+  transform: translateY(102%);
+  transition: transform .38s var(--control-ease);
+  pointer-events: none;
+}
+
+.button svg, .text-link svg, .header-book svg {
+  flex-shrink: 0;
+  transition: transform .32s var(--control-ease);
+}
+
+:is(.menu-toggle, .hero-play-pause, .press-lightbox-close, .press-filters-arrow, .date-icon-button, .dialog-header button, .date-day, .step, .drum-pad) {
+  transition: scale .18s var(--control-ease), background-color .2s ease, color .2s ease, border-color .2s ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .button:not(:disabled):hover { translate: 0 -2px; }
+  .button-solid:not(:disabled):hover::before { transform: translateY(0); }
+  :is(.button, .text-link, .header-book):not(:disabled):hover .lucide-arrow-up-right { transform: translate(3px, -3px); }
+  :is(.press-filters button, .preset-controls button, .press-zoom-btn):not(:disabled):hover { translate: 0 -1px; }
+  :is(.menu-toggle, .date-icon-button, .dialog-header button):not(:disabled):hover { scale: 1.05; }
+}
+
+.button-solid:focus-visible::before { transform: translateY(0); }
+:is(.button, .text-link, .header-book, .hero-sound-toggle, .press-filters button, .press-switch-btn, .press-zoom-btn, .preset-controls button, .date-shortcuts button):not(:disabled):active {
+  translate: 0 0;
+  scale: .97;
+}
+:is(.menu-toggle, .hero-play-pause, .press-lightbox-close, .press-filters-arrow, .date-icon-button, .dialog-header button, .date-day, .step, .drum-pad):not(:disabled):active { scale: .94; }
+.button:disabled { cursor: default; }
+
+@media (prefers-reduced-motion: reduce) {
+  :is(.button, .text-link, .header-book, .hero-sound-toggle, .press-filters button, .press-switch-btn, .press-zoom-btn, .preset-controls button, .date-shortcuts button, .menu-toggle, .hero-play-pause, .press-lightbox-close, .press-filters-arrow, .date-icon-button, .dialog-header button, .date-day, .step, .drum-pad) {
+    translate: none !important;
+    scale: none !important;
+    transform: none !important;
+    transition: none !important;
+  }
+  .button-solid::before { display: none; }
+  .button-solid:not(:disabled):is(:hover, :focus-visible) { background: var(--control-highlight); }
+  .button svg, .text-link svg, .header-book svg { transform: none !important; transition: none !important; }
+}
