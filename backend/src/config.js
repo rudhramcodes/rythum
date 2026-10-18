@@ -19,8 +19,6 @@ const schema = z.object({
   ADMIN_EMAIL: z.email().transform(value => value.toLowerCase()).default('notyourshastri@gmail.com'),
   AUTH_SECRET: z.string().default(''),
   AUTH_BASE_URL: z.string().default('http://localhost:4000'),
-  GOOGLE_CLIENT_ID: z.string().default(''),
-  GOOGLE_CLIENT_SECRET: z.string().default(''),
 });
 
 export function readConfig(env = process.env) {
@@ -34,7 +32,6 @@ export function readConfig(env = process.env) {
     (config.AUTH_SECRET && config.NODE_ENV === 'production' && authUrl.protocol !== 'https:')) {
     throw new Error('AUTH_BASE_URL must be an exact origin (HTTPS in production).');
   }
-  if (Boolean(config.GOOGLE_CLIENT_ID) !== Boolean(config.GOOGLE_CLIENT_SECRET)) throw new Error('Set both Google OAuth credentials.');
   config.origins = config.WEB_ORIGINS.split(',').map(v => v.trim());
   for (const origin of config.origins) {
     let url;

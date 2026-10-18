@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ArrowLeft, ArrowRight, Search, LogOut, RefreshCw, Eye, EyeOff, Inbox, Copy, Check } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Search, LogOut, RefreshCw, Eye, EyeOff, Inbox, Copy, Check, Shield } from 'lucide-react';
 import gsap from 'gsap';
 import { adminRequest } from './adminApi';
 import SmoothField from '../components/booking/SmoothField';
@@ -102,22 +102,76 @@ function CopyButton({ text, label = 'Copy', className = '' }) {
 }
 
 
+function PasswordField({
+  id,
+  name,
+  label,
+  autoComplete,
+  required = false,
+  minLength,
+  maxLength,
+  placeholder,
+  helperText,
+  helperAction,
+  disabled = false,
+  className = ''
+}) {
+  const [visible, setVisible] = useState(false);
+  return (
+    <div className={`admin-field-group ${className}`}>
+      <div className="admin-label-row">
+        <label htmlFor={id}>{label}</label>
+        {helperAction || (helperText && <span className="admin-field-helper">{helperText}</span>)}
+      </div>
+      <div className="admin-password-field">
+        <SmoothField
+          id={id}
+          name={name}
+          type={visible ? 'text' : 'password'}
+          inputMode="text"
+          autoComplete={autoComplete}
+          autoCapitalize="none"
+          autoCorrect="off"
+          spellCheck={false}
+          required={required}
+          minLength={minLength}
+          maxLength={maxLength}
+          placeholder={placeholder}
+          disabled={disabled}
+        />
+        <button
+          type="button"
+          className="admin-eye-toggle"
+          onClick={() => setVisible(v => !v)}
+          aria-controls={id}
+          aria-label={visible ? `Hide ${label.toLowerCase()}` : `Show ${label.toLowerCase()}`}
+          aria-pressed={visible}
+        >
+          {visible ? <EyeOff size={18} aria-hidden="true" /> : <Eye size={18} aria-hidden="true" />}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function SignIn({ onSignIn, configuration }) {
   const [token, setToken] = useState(() => new URLSearchParams(window.location.hash.slice(1)).get('reset') || '');
   const [mode, setMode] = useState(() => token ? 'reset' : 'login');
   const [busy, setBusy] = useState(false);
-  const [visible, setVisible] = useState(false);
   const [email, setEmail] = useState('');
   const [notice, setNotice] = useState('');
-  const [error, setError] = useState(() => window.location.search.includes('error=') ? 'Google sign-in was not completed. Please use the approved admin account.' : '');
+  const [error, setError] = useState('');
   const heading = useRef(null);
+
   useEffect(() => {
     if (token) window.history.replaceState(null, '', window.location.pathname);
   }, [token]);
+
   function switchMode(next) {
-    setMode(next); setError(''); setNotice(''); setVisible(false);
+    setMode(next); setError(''); setNotice('');
     requestAnimationFrame(() => heading.current?.focus());
   }
+
   async function submit(event) {
     event.preventDefault();
     if (busy) return;
@@ -144,16 +198,9 @@ function SignIn({ onSignIn, configuration }) {
       setError(mode === 'forgot' ? 'Could not send the reset link. Please try again shortly.' : mode === 'reset' ? 'This link may have expired or already been used. Request a new reset link.' : 'Unable to sign in. Check your email and password, or try again shortly.');
     } finally { setBusy(false); }
   }
-  async function google() {
-    setBusy(true); setError('');
-    try {
-      const data = await adminRequest('auth/sign-in/social', { method: 'POST', body: JSON.stringify({ provider: 'google', callbackURL: `${window.location.origin}/admin`, errorCallbackURL: `${window.location.origin}/admin?error=google`, disableRedirect: true }) });
-      const url = new URL(data.url);
-      if (url.protocol !== 'https:' || url.hostname !== 'accounts.google.com') throw new Error('Invalid provider redirect');
-      window.location.assign(url.href);
-    } catch { setError('Google sign-in is unavailable. Please use email and password.'); setBusy(false); }
-  }
+
   const recovering = mode !== 'login';
+
   return <>
     <header className="admin-login-header"><a className="text-link" href="/"><ArrowLeft size={16} aria-hidden="true" /> Back to website</a><p className="admin-wordmark">RYTHUM SHASTRI<span>.</span></p></header>
     <div className="admin-login-layout">
@@ -162,16 +209,43 @@ function SignIn({ onSignIn, configuration }) {
         <h2 id="admin-signin" ref={heading} tabIndex={-1}>{mode === 'forgot' ? 'Forgot password?' : mode === 'reset' ? 'A fresh start.' : 'Welcome back.'}</h2>
         <p>{mode === 'forgot' ? 'Enter your admin email to receive a reset link.' : mode === 'reset' ? 'Choose a new password for your workspace.' : 'Sign in to your private workspace.'}</p>
         <form onSubmit={submit} aria-busy={busy}><fieldset disabled={busy || !configuration.enabled} key={mode}>
-          {mode !== 'reset' && <div className="admin-login-field"><label htmlFor="admin-email">Email address</label><SmoothField id="admin-email" name="email" type="email" inputMode="email" autoComplete="username" autoCapitalize="none" autoCorrect="off" spellCheck={false} enterKeyHint={mode === 'forgot' ? 'send' : 'next'} required placeholder="you@example.com" value={email} onChange={event => setEmail(event.target.value)} /></div>}
-          {mode !== 'forgot' && <div className="admin-login-field"><div className="admin-label-row"><label htmlFor="admin-password">{mode === 'reset' ? 'New password' : 'Password'}</label>{mode === 'login' && <button className="admin-inline-link" type="button" onClick={() => switchMode('forgot')}>Forgot password?</button>}</div>
-            <div className="admin-password-field"><SmoothField id="admin-password" name="password" type={visible ? 'text' : 'password'} inputMode="text" autoComplete={mode === 'reset' ? 'new-password' : 'current-password'} autoCapitalize="none" autoCorrect="off" spellCheck={false} enterKeyHint={mode === 'reset' ? 'next' : 'go'} minLength={mode === 'reset' ? 12 : undefined} maxLength={128} required placeholder={mode === 'reset' ? 'At least 12 characters' : 'Enter your password'} /><button type="button" onClick={() => setVisible(!visible)} aria-controls="admin-password" aria-label={visible ? 'Hide password' : 'Show password'} aria-pressed={visible}>{visible ? <EyeOff size={18} /> : <Eye size={18} />}</button></div>
-          </div>}
-          {mode === 'reset' && <div className="admin-login-field"><label htmlFor="admin-confirm">Confirm password</label><SmoothField id="admin-confirm" name="confirm" type="password" inputMode="text" autoComplete="new-password" autoCapitalize="none" autoCorrect="off" spellCheck={false} enterKeyHint="go" required minLength={12} maxLength={128} placeholder="Re-enter your new password" /></div>}
+          {mode !== 'reset' && (
+            <div className="admin-field-group admin-login-field">
+              <label htmlFor="admin-email">Email address</label>
+              <SmoothField id="admin-email" name="email" type="email" inputMode="email" autoComplete="username" autoCapitalize="none" autoCorrect="off" spellCheck={false} enterKeyHint={mode === 'forgot' ? 'send' : 'next'} required placeholder="you@example.com" value={email} onChange={event => setEmail(event.target.value)} />
+            </div>
+          )}
+          {mode !== 'forgot' && (
+            <PasswordField
+              id="admin-password"
+              name="password"
+              label={mode === 'reset' ? 'New password' : 'Password'}
+              autoComplete={mode === 'reset' ? 'new-password' : 'current-password'}
+              required
+              minLength={mode === 'reset' ? 12 : undefined}
+              maxLength={128}
+              placeholder={mode === 'reset' ? 'At least 12 characters' : 'Enter your password'}
+              helperAction={mode === 'login' ? <button className="admin-inline-link" type="button" onClick={() => switchMode('forgot')}>Forgot password?</button> : null}
+              className="admin-login-field"
+            />
+          )}
+          {mode === 'reset' && (
+            <PasswordField
+              id="admin-confirm"
+              name="confirm"
+              label="Confirm password"
+              autoComplete="new-password"
+              required
+              minLength={12}
+              maxLength={128}
+              placeholder="Re-enter your new password"
+              className="admin-login-field"
+            />
+          )}
           {error && <p role="alert" className="admin-error">{error}</p>}
           {notice && <p role="status" className="admin-notice">{notice}</p>}
           {mode === 'forgot' && !configuration.resetEnabled ? <p role="status" className="admin-hint">Email recovery is not available yet. Contact the website administrator to restore access.</p> : <button className="button button-solid" type="submit" disabled={busy}>{busy ? 'Please wait…' : mode === 'forgot' ? 'Send reset link' : mode === 'reset' ? 'Save new password' : 'Sign in'}<ArrowRight size={18} aria-hidden="true" /></button>}
         </fieldset></form>
-        {!recovering && configuration.googleEnabled && <button className="admin-google" type="button" onClick={google} disabled={busy}>Continue with Google</button>}
         {recovering && <button className="admin-inline-link admin-return" disabled={busy} type="button" onClick={() => switchMode('login')}><ArrowLeft size={16} aria-hidden="true" /> Back to sign in</button>}
         {mode === 'reset' && error && <button className="admin-inline-link admin-return" disabled={busy} type="button" onClick={() => switchMode('forgot')}>Request a new reset link</button>}
         {!configuration.enabled && <p role="alert" className="admin-error">Admin authentication is not configured yet.</p>}
@@ -180,35 +254,166 @@ function SignIn({ onSignIn, configuration }) {
   </>;
 }
 
-function Security({ onExpired }) {
-  const [notice, setNotice] = useState('');
+function Security({ user, onExpired }) {
+  const [notice, setNotice] = useState({ text: '', type: '' });
   const [busy, setBusy] = useState(false);
+  const [revokeBusy, setRevokeBusy] = useState(false);
+
   async function changePassword(event) {
     event.preventDefault();
     const form = event.currentTarget;
     const data = new FormData(form);
-    if (data.get('newPassword') !== data.get('confirm')) { setNotice('New passwords must match.'); return; }
-    setBusy(true); setNotice('');
+    const current = String(data.get('currentPassword') || '').trim();
+    const next = String(data.get('newPassword') || '').trim();
+    const confirm = String(data.get('confirm') || '').trim();
+
+    if (!current) {
+      setNotice({ text: 'Please enter your current password.', type: 'error' });
+      return;
+    }
+    if (next !== confirm) {
+      setNotice({ text: 'New passwords do not match. Please verify both fields.', type: 'error' });
+      return;
+    }
+    if (next.length < 12) {
+      setNotice({ text: 'New password must be at least 12 characters long.', type: 'error' });
+      return;
+    }
+
+    setBusy(true);
+    setNotice({ text: '', type: '' });
     try {
-      await adminRequest('auth/change-password', { method: 'POST', body: JSON.stringify({ currentPassword: data.get('currentPassword'), newPassword: data.get('newPassword'), revokeOtherSessions: true }) });
-      form.reset(); setNotice('Password updated. Other sessions have been signed out.');
-    } catch (error) { if (error.status === 401) onExpired(); else setNotice('Unable to update password. Check your current password and try again.'); }
-    finally { setBusy(false); }
+      await adminRequest('auth/change-password', {
+        method: 'POST',
+        body: JSON.stringify({ currentPassword: current, newPassword: next, revokeOtherSessions: true })
+      });
+      form.reset();
+      setNotice({ text: 'Password successfully updated! All other active sessions have been signed out.', type: 'success' });
+    } catch (error) {
+      if (error.status === 401) onExpired();
+      else setNotice({ text: 'Unable to update password. Check your current password and try again.', type: 'error' });
+    } finally {
+      setBusy(false);
+    }
   }
+
   async function revokeOthers() {
-    setBusy(true); setNotice('');
-    try { await adminRequest('auth/revoke-other-sessions', { method: 'POST', body: '{}' }); setNotice('Other devices have been signed out.'); }
-    catch (error) { if (error.status === 401) onExpired(); else setNotice(error.message); }
-    finally { setBusy(false); }
+    setRevokeBusy(true);
+    setNotice({ text: '', type: '' });
+    try {
+      await adminRequest('auth/revoke-other-sessions', { method: 'POST', body: '{}' });
+      setNotice({ text: 'All other active devices have been signed out successfully.', type: 'success' });
+    } catch (error) {
+      if (error.status === 401) onExpired();
+      else setNotice({ text: error.message || 'Failed to revoke other sessions.', type: 'error' });
+    } finally {
+      setRevokeBusy(false);
+    }
   }
-  return <section className="admin-security"><h2>Account security</h2><p>You can stay signed in on multiple devices. Changing the password signs out the others.</p>
-    <form onSubmit={changePassword}><fieldset disabled={busy}>
-      <label>Current password<input name="currentPassword" type="password" autoComplete="current-password" required /></label>
-      <label>New password<input name="newPassword" type="password" autoComplete="new-password" minLength={12} maxLength={128} required /></label>
-      <label>Confirm new password<input name="confirm" type="password" autoComplete="new-password" minLength={12} maxLength={128} required /></label>
-      <button type="submit" className="button button-solid">Update password</button>
-    </fieldset></form><button type="button" className="text-link" onClick={revokeOthers} disabled={busy}>Sign out other devices</button><p role="status">{notice}</p>
-  </section>;
+
+  return (
+    <section className="admin-security">
+      <div className="admin-security-heading">
+        <p className="admin-account-tag">
+          Signed in as <strong>{user?.email}</strong>
+        </p>
+        <h1>Account security</h1>
+        <p className="admin-security-sub">
+          You can stay signed in on multiple devices. Changing your password signs out all other sessions automatically.
+        </p>
+      </div>
+
+      <div className="admin-security-grid">
+        {/* Card 1: Change Password */}
+        <div className="admin-security-card">
+          <div className="admin-card-header">
+            <h3>Change password</h3>
+            <p>Ensure your account uses a secure password of at least 12 characters.</p>
+          </div>
+
+          <form onSubmit={changePassword} noValidate>
+            <fieldset disabled={busy} className="admin-fieldset">
+              <PasswordField
+                id="sec-current-password"
+                name="currentPassword"
+                label="Current password"
+                autoComplete="current-password"
+                required
+                placeholder="Enter current password"
+              />
+
+              <PasswordField
+                id="sec-new-password"
+                name="newPassword"
+                label="New password"
+                autoComplete="new-password"
+                minLength={12}
+                maxLength={128}
+                required
+                placeholder="At least 12 characters"
+                helperText="Min. 12 characters"
+              />
+
+              <PasswordField
+                id="sec-confirm-password"
+                name="confirm"
+                label="Confirm new password"
+                autoComplete="new-password"
+                minLength={12}
+                maxLength={128}
+                required
+                placeholder="Re-enter new password"
+              />
+
+              {notice.text && (
+                <div
+                  className={`admin-security-notice ${notice.type === 'error' ? 'is-error' : 'is-success'}`}
+                  role={notice.type === 'error' ? 'alert' : 'status'}
+                >
+                  {notice.type === 'success' ? <Check size={16} aria-hidden="true" /> : null}
+                  <span>{notice.text}</span>
+                </div>
+              )}
+
+              <div className="admin-security-actions">
+                <button type="submit" className="button button-solid" disabled={busy}>
+                  {busy ? 'Updating password…' : 'Update password'}
+                </button>
+              </div>
+            </fieldset>
+          </form>
+        </div>
+
+        {/* Card 2: Devices & Session Management */}
+        <div className="admin-security-card admin-session-card">
+          <div className="admin-card-header">
+            <h3>Active sessions</h3>
+            <p>Lost a device or signed in from a shared computer? Terminate all other browser sessions immediately.</p>
+          </div>
+
+          <div className="admin-session-box">
+            <div className="admin-session-info">
+              <span className="admin-session-status-dot" aria-hidden="true" />
+              <div>
+                <strong>Current session active</strong>
+                <p>This browser will remain signed in.</p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              className="button admin-revoke-btn"
+              onClick={revokeOthers}
+              disabled={revokeBusy || busy}
+            >
+              <Shield size={16} aria-hidden="true" />
+              <span>{revokeBusy ? 'Signing out devices…' : 'Sign out other devices'}</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
 }
 
 function InquiryInbox({ onExpired }) {
@@ -539,7 +744,16 @@ export default function Admin() {
       </div>
     ) : !user ? <SignIn configuration={configuration} onSignIn={loadSession} /> : <>
       <header className="admin-header"><a href="/" className="admin-wordmark">RYTHUM SHASTRI<span>.</span></a><AdminNav screen={screen} setScreen={setScreen} /><button type="button" className="text-link" onClick={logout}><LogOut size={16} /> Sign out</button></header>
-      <div className="admin-workspace"><p className="admin-account">{user.email}</p>{screen === 'security' ? <Security onExpired={expire} /> : <InquiryInbox onExpired={expire} />}</div>
+      <div className="admin-workspace">
+        {screen === 'security' ? (
+          <Security user={user} onExpired={expire} />
+        ) : (
+          <>
+            <p className="admin-account">{user.email}</p>
+            <InquiryInbox onExpired={expire} />
+          </>
+        )}
+      </div>
     </>}
   </main>;
 }

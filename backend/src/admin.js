@@ -14,7 +14,7 @@ const { details: _details, ...listFields } = fields;
 
 export function adminRouter({ db, auth, config }) {
   const router = Router();
-  router.get('/config', (req, res) => res.json({ enabled: Boolean(auth), googleEnabled: Boolean(auth && config.GOOGLE_CLIENT_ID), resetEnabled: Boolean(auth && config.SMTP_ENABLED === 'true') }));
+  router.get('/config', (req, res) => res.json({ enabled: Boolean(auth), resetEnabled: Boolean(auth && config.SMTP_ENABLED === 'true') }));
   router.use(async (req, res, next) => {
     if (!auth) throw new ApiError(503, 'ADMIN_UNAVAILABLE', 'Admin authentication is not configured.');
     const session = await auth.api.getSession({ headers: fromNodeHeaders(req.headers) });

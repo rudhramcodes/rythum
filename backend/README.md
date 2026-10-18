@@ -18,15 +18,7 @@ Only code/API tests were run. No browser, real Google sign-in, booking submissio
 
 For a fresh database, generate a long random `AUTH_SECRET`, configure `ADMIN_EMAIL` and `AUTH_BASE_URL`, then run `npm run admin:create` with `ADMIN_BOOTSTRAP_PASSWORD` supplied securely in the process environment. Do not commit passwords, pass them in shell command arguments/history, or leave the bootstrap variable in `.env`. The command refuses to overwrite an existing account. An existing admin can change their password in the Security screen.
 
-Google setup:
-- Create a Web application OAuth client in Google Cloud and configure its consent screen/test users as appropriate.
-- Add the exact redirect URI `http://localhost:4000/api/auth/callback/google` for development.
-- Add `https://api.rythumshastri.com/api/auth/callback/google` when the production API is deployed.
-- Put `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` only in backend secrets; restart the API. The Google button appears once configured.
-- `AUTH_BASE_URL` is the backend origin (`http://localhost:4000` locally, `https://api.rythumshastri.com` in production). Google sign-in uses the pre-created owner account; other Google accounts cannot access the inbox.
-- Keep frontend/backend on the same site in production (`www.rythumshastri.com` and `api.rythumshastri.com`). Unrelated Vercel/Render default domains can be affected by browser third-party-cookie restrictions; use a same-site staging domain or same-origin proxy.
-
-Implementation reference: [Better Auth Express integration](https://better-auth.com/docs/integrations/express), [standalone MongoDB adapter](https://better-auth.com/docs/adapters/mongo), [Google configuration](https://better-auth.com/docs/authentication/google).
+Implementation reference: [Better Auth Express integration](https://better-auth.com/docs/integrations/express), [standalone MongoDB adapter](https://better-auth.com/docs/adapters/mongo).
 
 Targeted code tests: `node --test test/admin.test.js` from `backend/`. They use a disposable MongoDB and synthetic users, never the real owner's password or existing inquiry data.
 

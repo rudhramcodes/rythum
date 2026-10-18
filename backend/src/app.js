@@ -29,7 +29,7 @@ export function createApp({ db, config, resetTransport }) {
   const authLimit = rateLimit({ windowMs: 15 * 60 * 1000, limit: 30, standardHeaders: 'draft-8', legacyHeaders: false });
   app.all('/api/auth/*splat', authLimit, (req, res, next) => {
     if (!auth) return next(new ApiError(503, 'ADMIN_UNAVAILABLE', 'Admin authentication is not configured.'));
-    const allowed = ['/sign-in/email', '/sign-in/social', '/callback/google', '/get-session', '/sign-out', '/change-password', '/revoke-other-sessions', '/request-password-reset', '/reset-password'];
+    const allowed = ['/sign-in/email', '/get-session', '/sign-out', '/change-password', '/revoke-other-sessions', '/request-password-reset', '/reset-password'];
     if (!allowed.some(path => req.path === `/api/auth${path}`)) return res.status(404).json({ error: { message: 'Not found.' } });
     if (req.method !== 'GET' && !config.origins.includes(req.get('Origin'))) return next(new ApiError(403, 'ORIGIN_REQUIRED', 'Use the admin website.'));
     return toNodeHandler(auth)(req, res, next);

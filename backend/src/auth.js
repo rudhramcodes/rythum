@@ -28,10 +28,6 @@ export function createAdminAuth(db, config, { bootstrap = false, resetTransport 
         if (!result.accepted?.length) throw new Error('Reset email was not accepted.');
       } } : {}),
     },
-    socialProviders: config.GOOGLE_CLIENT_ID ? {
-      google: { clientId: config.GOOGLE_CLIENT_ID, clientSecret: config.GOOGLE_CLIENT_SECRET, prompt: 'select_account', disableSignUp: true },
-    } : {},
-    account: { accountLinking: { enabled: true, trustedProviders: ['google'], allowDifferentEmails: false } },
     session: { expiresIn: 60 * 60 * 12, updateAge: 60 * 60, cookieCache: { enabled: false } },
     rateLimit: { enabled: true, storage: 'database', window: 60, max: 30 },
     advanced: { useSecureCookies: config.NODE_ENV === 'production', defaultCookieAttributes: { httpOnly: true, sameSite: 'lax' } },
