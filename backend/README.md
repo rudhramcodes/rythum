@@ -2,7 +2,33 @@
 
 Implemented: Express 5 in plain JavaScript, MongoDB persistence, request validation, origin checks, rate limits, idempotent submissions, and an independent SMTP worker. The existing booking form now submits to the API and displays its saved reference. No email app is opened by submission.
 
-**This is the first Phase 1 milestone, not the completed operations system.** Admin authentication/MFA/inbox, customer sessions/portal, conversations, attachments, events/calendar, document management and operational settings are still pending. There are deliberately no public inquiry-list or inquiry-detail endpoints. A reference is not an access credential. Do not launch this as the complete booking system before staff have a secure way to handle saved inquiries.
+**Phase 1 is in progress.** A private `/admin` workspace now supports password sign-in, logout, concurrent sessions, password changes, signing out other devices, and a searchable/filterable read-only inquiry inbox. Google sign-in is implemented but requires OAuth credentials. MFA, status editing/notes, customer portal/conversations, files, calendar and document management remain pending. Inquiry list/detail APIs require the approved admin session; references alone grant no access.
+
+## Admin setup and manual checks
+
+Local owner: `notyourshastri@gmail.com`. The initial account has been created in the local development database. Its password is not stored in source or an environment file; Better Auth stores a hash in MongoDB. Sessions use HttpOnly, SameSite=Lax cookies, secure in production, with a 12-hour lifetime that renews while active. Multiple devices can stay signed in. Public signup and account/email changes are not exposed.
+
+1. Restart the backend after `.env` changes, then open `http://localhost:5173/admin`.
+2. Sign in with the approved email and the password supplied separately.
+3. Search/filter the inbox and open a saved inquiry. Verify its brief/contact/date details.
+4. In Security, change the password or sign out other devices. Changing the password signs out other sessions.
+5. Sign out, then refresh `/admin`; private inquiry data should no longer be accessible.
+
+Only code/API tests were run. No browser, real Google sign-in, booking submission or live-email checks were performed for this milestone.
+
+For a fresh database, generate a long random `AUTH_SECRET`, configure `ADMIN_EMAIL` and `AUTH_BASE_URL`, then run `npm run admin:create` with `ADMIN_BOOTSTRAP_PASSWORD` supplied securely in the process environment. Do not commit passwords, pass them in shell command arguments/history, or leave the bootstrap variable in `.env`. The command refuses to overwrite an existing account. An existing admin can change their password in the Security screen.
+
+Google setup:
+- Create a Web application OAuth client in Google Cloud and configure its consent screen/test users as appropriate.
+- Add the exact redirect URI `http://localhost:4000/api/auth/callback/google` for development.
+- Add `https://api.rythumshastri.com/api/auth/callback/google` when the production API is deployed.
+- Put `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` only in backend secrets; restart the API. The Google button appears once configured.
+- `AUTH_BASE_URL` is the backend origin (`http://localhost:4000` locally, `https://api.rythumshastri.com` in production). Google sign-in uses the pre-created owner account; other Google accounts cannot access the inbox.
+- Keep frontend/backend on the same site in production (`www.rythumshastri.com` and `api.rythumshastri.com`). Unrelated Vercel/Render default domains can be affected by browser third-party-cookie restrictions; use a same-site staging domain or same-origin proxy.
+
+Implementation reference: [Better Auth Express integration](https://better-auth.com/docs/integrations/express), [standalone MongoDB adapter](https://better-auth.com/docs/adapters/mongo), [Google configuration](https://better-auth.com/docs/authentication/google).
+
+Targeted code tests: `node --test test/admin.test.js` from `backend/`. They use a disposable MongoDB and synthetic users, never the real owner's password or existing inquiry data.
 
 ## Run locally
 
@@ -75,9 +101,9 @@ Abuse controls: 10 attempts per IP per 15 minutes, 3 distinct submission attempt
 
 Worker states: `pending` → `sending` → `sent`, `failed`, or `uncertain`. `sent` means accepted by SMTP, not delivered to an inbox. Definite transient rejections retry with exponential backoff, up to five attempts. A dropped connection after DATA or an interrupted worker lease goes to `uncertain` for review rather than blindly resending. A stable Message-ID helps trace delivery but cannot guarantee exactly-once email delivery.
 
-Only reference/acknowledgement text is emailed; customer event details are stored in MongoDB. Team alerts also contain a reference only. Replies currently go to the configured Reply-To mailbox; they are **not imported** into a website conversation. Customer acknowledgements do not verify ownership of the submitted email address. No website return-access link is sent until the portal's authentication flow exists.
+Email templates use the saved inquiry data. Replies currently go to the configured Reply-To mailbox; they are **not imported** into a website conversation. Customer acknowledgements do not verify ownership of the submitted email address. No website return-access link is sent until the portal's authentication flow exists.
 
-Failed/uncertain jobs currently remain inspectable in the database by authorized operators. Admin display/manual retry is pending; do not reset uncertain jobs until delivery is checked with the provider. No private API or shared admin password has been added as a workaround.
+Failed/uncertain jobs currently remain inspectable in the database by authorized operators. Admin job display/manual retry is pending; do not reset uncertain jobs until delivery is checked with the provider.
 
 ## Verify
 
@@ -97,3 +123,9 @@ npm run build
 ```
 
 Still needed before integration/launch: MongoDB connection and restricted user, chosen VPS/Render access, SMTP sender and credentials, approved staff recipients, authentication provider/admin emails, storage provider, real delivery tests, backups/restore tests and remaining Phase 1 features. Provide invitations or enter credentials locally/in the host secret store; do not paste passwords into chat.
+
+### Admin password recovery
+
+The sign-in screen includes email recovery and a new-password form. Enable the existing SMTP configuration to send reset emails; no notification worker is needed for these messages. Reset links use the first `WEB_ORIGINS` entry, so put the canonical frontend origin first in production. Links expire after 15 minutes, work once, and revoke all sessions after a successful reset. The token is carried in the URL fragment and removed when the form opens. Passwords require at least 12 characters. Unknown addresses receive the same confirmation response.
+
+Manual checks: open `/admin`, check email/password keyboard and autofill on mobile, toggle password visibility, use Forgot password, follow the email link, and sign in with the new password. Confirm a used link cannot reset again. SMTP delivery and browser appearance are not covered by the isolated code tests.

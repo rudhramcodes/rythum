@@ -15,7 +15,6 @@ export async function submitInquiry(payload, key, apiUrl = import.meta.env?.VITE
     const error = new Error(result?.error?.message || 'The booking service is unavailable. Please try again shortly.');
     error.code = result?.error?.code;
     error.fields = result?.error?.fields || {};
-    error.reference = result?.error?.reference;
     throw error;
   }
   if (!result?.inquiry?.reference) throw new Error('We could not confirm your submission. Please retry with the same details.');

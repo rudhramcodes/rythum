@@ -26,9 +26,8 @@ export async function saveInquiry({ db, config }, input, key, now = new Date()) 
     throw new ApiError(
       409,
       'DUPLICATE_INQUIRY',
-      `An inquiry from ${details.email} has already been received (Reference: ${activeExisting.reference}) and is awaiting review. Our team will contact you soon.`,
-      { email: 'An inquiry with this email address is already awaiting review.' },
-      activeExisting.reference
+      'An inquiry is already awaiting review. Please use your original confirmation for follow-up.',
+      { email: 'An inquiry with this email address is already awaiting review.' }
     );
   }
 

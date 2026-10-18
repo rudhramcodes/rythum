@@ -1,0 +1,106 @@
+.copy-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  background: #141810;
+  border: 1px solid #2d3624;
+  border-radius: 9999px;
+  padding: 4px 6px 4px 18px;
+  max-width: 100%;
+  transition: border-color 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+              background-color 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  user-select: text;
+}
+
+.copy-pill.is-full-width {
+  width: 100%;
+}
+
+.copy-pill:hover {
+  border-color: #424f35;
+  background: #171d13;
+}
+
+.copy-pill.is-copied {
+  border-color: var(--accent);
+  background: #192114;
+  box-shadow: 0 0 16px rgba(207, 219, 157, 0.16);
+}
+
+.copy-pill-text {
+  font-size: 14px;
+  color: #eeefeb;
+  line-height: 1.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.copy-pill-text.is-mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  letter-spacing: 0.02em;
+  font-size: 14px;
+}
+
+.copy-pill-divider {
+  width: 1px;
+  height: 24px;
+  background: #283120;
+  flex-shrink: 0;
+  transition: background-color 0.2s;
+}
+
+.copy-pill.is-copied .copy-pill-divider {
+  background: rgba(207, 219, 157, 0.3);
+}
+
+.copy-pill-action {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #a1a59e;
+  border-radius: 9999px;
+  cursor: pointer;
+  flex-shrink: 0;
+  outline: none;
+  transition: color 0.15s, background-color 0.15s, transform 0.1s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.copy-pill-action:hover {
+  color: var(--accent);
+  background: rgba(207, 219, 157, 0.08);
+}
+
+.copy-pill-action:active {
+  transform: scale(0.88);
+}
+
+.copy-pill-action:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.copy-pill-icon {
+  display: grid;
+  place-items: center;
+}
+
+.copy-pill.is-copied .copy-pill-action {
+  color: var(--accent);
+}
+
+.copy-pill-check {
+  color: var(--accent);
+  animation: copy-pill-pop 0.24s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+@keyframes copy-pill-pop {
+  0% { transform: scale(0.6); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}

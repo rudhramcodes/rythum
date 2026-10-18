@@ -20,5 +20,5 @@ test('network failures, invalid success responses and server validation do not r
   fetch.mock.mockImplementation(async () => Response.json({ error: { message: 'Check date', fields: { date: 'Past date' } } }, { status: 422 }));
   await assert.rejects(submitInquiry({}, 'key'), error => error.message === 'Check date' && error.fields.date === 'Past date');
   fetch.mock.mockImplementation(async () => Response.json({ error: { code: 'DUPLICATE_INQUIRY', message: 'Already exists', reference: 'RS-999', fields: { email: 'Duplicate' } } }, { status: 409 }));
-  await assert.rejects(submitInquiry({}, 'key'), error => error.code === 'DUPLICATE_INQUIRY' && error.reference === 'RS-999' && error.fields.email === 'Duplicate');
+  await assert.rejects(submitInquiry({}, 'key'), error => error.code === 'DUPLICATE_INQUIRY' && error.reference === undefined && error.fields.email === 'Duplicate');
 });

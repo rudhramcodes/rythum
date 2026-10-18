@@ -1,4 +1,5 @@
 import { MongoClient } from 'mongodb';
+import { prepareAuthIndexes } from './auth.js';
 
 export async function prepareDatabase(db) {
   await Promise.all([
@@ -19,6 +20,7 @@ export async function connectDatabase(config) {
     await client.connect();
     const db = client.db(config.MONGODB_DB);
     await prepareDatabase(db);
+    if (config.AUTH_SECRET) await prepareAuthIndexes(db);
     return { client, db };
   } catch (error) {
     await client.close();

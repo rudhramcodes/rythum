@@ -172,11 +172,12 @@ p {
 
 .text-link svg {
   flex-shrink: 0;
-  transition: transform .2s;
 }
 
-.text-link:hover svg {
-  transform: translate(2px, -2px);
+.text-link:hover svg,
+:hover > svg[class*="lucide-arrow"],
+:hover svg[class*="lucide-arrow"] {
+  transform: none !important;
 }
 
 .button {

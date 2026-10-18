@@ -49,12 +49,11 @@ export function inquirySchema(now = new Date()) {
 export const idempotencySchema = z.uuid();
 
 export class ApiError extends Error {
-  constructor(status, code, message, fields = null, reference = null) {
+  constructor(status, code, message, fields = null) {
     super(message);
     this.status = status;
     this.code = code;
     this.fields = fields;
-    this.reference = reference;
   }
 }
 

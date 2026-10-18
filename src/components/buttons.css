@@ -34,7 +34,6 @@
 
 .button svg, .text-link svg, .header-book svg {
   flex-shrink: 0;
-  transition: transform .32s var(--control-ease);
 }
 
 :is(.menu-toggle, .hero-play-pause, .press-lightbox-close, .press-filters-arrow, .date-icon-button, .dialog-header button, .date-day, .step, .drum-pad) {
@@ -44,7 +43,6 @@
 @media (hover: hover) and (pointer: fine) {
   .button:not(:disabled):hover { translate: 0 -2px; }
   .button-solid:not(:disabled):hover::before { transform: translateY(0); }
-  :is(.button, .text-link, .header-book):not(:disabled):hover .lucide-arrow-up-right { transform: translate(3px, -3px); }
   :is(.press-filters button, .preset-controls button, .press-zoom-btn):not(:disabled):hover { translate: 0 -1px; }
   :is(.menu-toggle, .date-icon-button, .dialog-header button):not(:disabled):hover { scale: 1.05; }
 }

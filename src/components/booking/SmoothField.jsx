@@ -21,7 +21,7 @@ export default function SmoothField({ multiline = false, error = '', type, id, .
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
 
     function update() {
-      let start = null;
+      let start;
       try { start = input.selectionStart; } catch { start = null; }
       const custom = start !== null && !reduced.matches;
       input.classList.toggle('has-smooth-caret', custom);
@@ -32,17 +32,27 @@ export default function SmoothField({ multiline = false, error = '', type, id, .
       measurement.style.width = `${input.offsetWidth}px`;
       measurement.style.whiteSpace = multiline ? 'pre-wrap' : 'pre';
       measurement.style.overflowWrap = multiline ? 'break-word' : 'normal';
-      measurement.textContent = input.value.slice(0, start);
-      marker.textContent = input.value.slice(start) || '\u200b';
+      // Never copy a password into the measurement DOM.
+      const displayValue = input.type === 'password' ? '•'.repeat(input.value.length) : input.value;
+      measurement.textContent = displayValue.slice(0, start);
+      marker.textContent = displayValue.slice(start) || '\u200b';
       measurement.append(marker);
       const rect = marker.getClientRects()[0];
       const box = measurement.getBoundingClientRect();
       const x = rect.left - box.left - input.scrollLeft;
-      const y = rect.top - box.top - input.scrollTop;
-      caretElement.style.height = `${parseFloat(style.fontSize) * 1.15}px`;
+      const fontSize = parseFloat(style.fontSize) || 16;
+      const caretHeight = Math.round(fontSize * 1.05);
+      const paddingTop = parseFloat(style.paddingTop) || 0;
+      const paddingBottom = parseFloat(style.paddingBottom) || 0;
+      const contentHeight = input.clientHeight - paddingTop - paddingBottom;
+      const y = multiline
+        ? (rect.top - box.top - input.scrollTop)
+        : Math.round(paddingTop + (contentHeight - caretHeight) / 2 + 1.5);
+      caretElement.style.height = `${caretHeight}px`;
       caretElement.style.opacity = x >= 0 && x < input.clientWidth && y >= 0 && y < input.clientHeight ? '1' : '0';
       gsap.to(caretElement, { x, y, duration: 0.14, ease: 'power3.out', overwrite: true });
     }
+
 
     const events = ['input', 'focus', 'blur', 'select', 'keyup', 'pointerup', 'scroll', 'compositionend'];
     events.forEach(event => input.addEventListener(event, update));

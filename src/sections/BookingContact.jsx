@@ -93,7 +93,6 @@ export default function BookingContact() {
       if (error.code === 'DUPLICATE_INQUIRY') {
         setDuplicateInquiry({
           message: error.message,
-          reference: error.reference,
         });
         setFieldErrors(prev => ({ ...prev, ...(error.fields || { email: 'An inquiry with this email address is already awaiting review.' }) }));
         setSubmissionError('');
@@ -139,11 +138,6 @@ export default function BookingContact() {
       <div className="booking-duplicate-banner" role="alert">
         <h4>Inquiry already received</h4>
         <p>{duplicateInquiry.message}</p>
-        {duplicateInquiry.reference && (
-          <div className="booking-duplicate-ref">
-            <span>Your reference:</span> <code>{duplicateInquiry.reference}</code>
-          </div>
-        )}
       </div>
     )}
     {submissionError && <p role="alert" className="booking-submit-error">{submissionError}</p>}

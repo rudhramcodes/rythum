@@ -137,10 +137,6 @@
   padding: 24px;
 }
 
-.press-article-link:hover .press-read {
-  transform: translateX(5px);
-}
-
 .press-article-link:hover .press-headline {
   color: var(--accent);
 }

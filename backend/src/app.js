@@ -5,9 +5,13 @@ import helmet from 'helmet';
 import { rateLimit } from 'express-rate-limit';
 import { inquirySchema, idempotencySchema, ApiError } from './validation.js';
 import { saveInquiry } from './inquiries.js';
+import { toNodeHandler } from 'better-auth/node';
+import { createAdminAuth } from './auth.js';
+import { adminRouter } from './admin.js';
 
-export function createApp({ db, config }) {
+export function createApp({ db, config, resetTransport }) {
   const app = express();
+  const auth = createAdminAuth(db, config, { resetTransport });
   app.disable('x-powered-by');
   app.set('trust proxy', config.TRUST_PROXY || false);
   app.use(helmet());
@@ -21,7 +25,16 @@ export function createApp({ db, config }) {
     if (origin && !config.origins.includes(origin)) return next(new ApiError(403, 'ORIGIN_DENIED', 'This website is not allowed to submit requests.'));
     next();
   });
-  app.use(cors({ origin: config.origins, methods: ['GET', 'POST'], allowedHeaders: ['Content-Type', 'Idempotency-Key'], maxAge: 600 }));
+  app.use(cors({ origin: config.origins, credentials: true, methods: ['GET', 'POST'], allowedHeaders: ['Content-Type', 'Idempotency-Key'], maxAge: 600 }));
+  const authLimit = rateLimit({ windowMs: 15 * 60 * 1000, limit: 30, standardHeaders: 'draft-8', legacyHeaders: false });
+  app.all('/api/auth/*splat', authLimit, (req, res, next) => {
+    if (!auth) return next(new ApiError(503, 'ADMIN_UNAVAILABLE', 'Admin authentication is not configured.'));
+    const allowed = ['/sign-in/email', '/sign-in/social', '/callback/google', '/get-session', '/sign-out', '/change-password', '/revoke-other-sessions', '/request-password-reset', '/reset-password'];
+    if (!allowed.some(path => req.path === `/api/auth${path}`)) return res.status(404).json({ error: { message: 'Not found.' } });
+    if (req.method !== 'GET' && !config.origins.includes(req.get('Origin'))) return next(new ApiError(403, 'ORIGIN_REQUIRED', 'Use the admin website.'));
+    return toNodeHandler(auth)(req, res, next);
+  });
+  app.use('/api/admin', adminRouter({ db, auth, config }));
   app.get('/api/health', async (req, res) => {
     await db.command({ ping: 1 });
     res.json({ status: 'ok' });
@@ -53,7 +66,6 @@ export function createApp({ db, config }) {
       if (error.status === 429) res.set('Retry-After', '3600');
       const payload = { code: error.code, message: error.message };
       if (error.fields) payload.fields = error.fields;
-      if (error.reference) payload.reference = error.reference;
       return res.status(error.status).json({ error: payload });
     }
     if (error.type === 'entity.too.large') return res.status(413).json({ error: { code: 'BODY_TOO_LARGE', message: 'The inquiry is too large.' } });

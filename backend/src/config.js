@@ -16,12 +16,25 @@ const schema = z.object({
   MAIL_FROM: z.string().default(''),
   MAIL_REPLY_TO: z.string().default(''),
   TEAM_EMAILS: z.string().default(''),
+  ADMIN_EMAIL: z.email().transform(value => value.toLowerCase()).default('notyourshastri@gmail.com'),
+  AUTH_SECRET: z.string().default(''),
+  AUTH_BASE_URL: z.string().default('http://localhost:4000'),
+  GOOGLE_CLIENT_ID: z.string().default(''),
+  GOOGLE_CLIENT_SECRET: z.string().default(''),
 });
 
 export function readConfig(env = process.env) {
   const parsed = schema.safeParse(env);
   if (!parsed.success) throw new Error(`Invalid configuration: ${parsed.error.issues.map(i => i.path.join('.')).join(', ')}`);
   const config = parsed.data;
+  if (config.AUTH_SECRET && config.AUTH_SECRET.length < 32) throw new Error('AUTH_SECRET must contain at least 32 characters.');
+  let authUrl;
+  try { authUrl = new URL(config.AUTH_BASE_URL); } catch { throw new Error('Invalid AUTH_BASE_URL.'); }
+  if (authUrl.origin !== config.AUTH_BASE_URL || !['https:', 'http:'].includes(authUrl.protocol) ||
+    (config.AUTH_SECRET && config.NODE_ENV === 'production' && authUrl.protocol !== 'https:')) {
+    throw new Error('AUTH_BASE_URL must be an exact origin (HTTPS in production).');
+  }
+  if (Boolean(config.GOOGLE_CLIENT_ID) !== Boolean(config.GOOGLE_CLIENT_SECRET)) throw new Error('Set both Google OAuth credentials.');
   config.origins = config.WEB_ORIGINS.split(',').map(v => v.trim());
   for (const origin of config.origins) {
     let url;

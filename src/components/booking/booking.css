@@ -49,8 +49,6 @@
 }
 .booking-duplicate-banner h4 { margin: 0 0 8px; font-size: 17px; font-weight: 500; color: #f2ac9b; font-family: 'Clash Display', Arial, sans-serif; }
 .booking-duplicate-banner p { margin: 0; font-size: 14px; color: #d5d9cf; line-height: 1.5; }
-.booking-duplicate-ref { display: flex; align-items: center; gap: 10px; margin-top: 12px; font-size: 13px; color: var(--muted); }
-.booking-duplicate-ref code { color: var(--accent); font-size: 14px; font-weight: 600; padding: 4px 8px; background: #14170f; border: 1px solid #3a4131; border-radius: 6px; letter-spacing: .03em; }
 .booking-form input.has-smooth-caret, .booking-form textarea.has-smooth-caret { caret-color: transparent; }
 .booking-form input { caret-color: var(--accent); }
 .booking-form .smooth-field textarea { display: block; min-height: 148px; }

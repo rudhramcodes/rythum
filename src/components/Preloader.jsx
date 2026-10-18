@@ -88,7 +88,7 @@ export const Preloader = ({ onEnter }) => {
           >
             <Volume2 size={18} className="animate-pulse" />
             <span>TAP TO ENTER THE PULSE</span>
-            <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
+            <ArrowRight size={16} />
           </button>
         ) : (
           <div className="flex items-center space-x-2 text-xs font-mono uppercase tracking-widest text-[#D9A441]">
