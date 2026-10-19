@@ -51,6 +51,7 @@ export async function saveInquiry({ db, config }, input, key, now = new Date()) 
   // One atomic document holds both the inquiry and durable notification intent.
   const inquiry = {
     ...details, reference, idempotencyKey, requestHash, status: 'New', source: 'website', createdAt: now, updatedAt: now,
+    unreadCount: 1,
     notificationRecipients: recipients.map((to, index) => ({ to, kind: index === 0 ? 'acknowledgement' : 'team-notification' })),
     outboxPending: true,
   };

@@ -8,7 +8,7 @@ export async function conversation(db, reference, query) {
   if (!page.success) throw new ApiError(400, 'INVALID_PAGE', 'Choose a valid page.');
   const filter = { reference };
   const [items, total] = await Promise.all([
-    db.collection('messages').find(filter, { projection: { _id: 0, key: 1, text: 1, role: 1, createdAt: 1 } }).sort({ createdAt: -1, _id: -1 }).skip((page.data - 1) * 50).limit(50).toArray(),
+    db.collection('messages').find(filter, { projection: { _id: 0, key: 1, text: 1, role: 1, createdAt: 1, readByAdmin: 1, readByCustomer: 1 } }).sort({ createdAt: -1, _id: -1 }).skip((page.data - 1) * 50).limit(50).toArray(),
     db.collection('messages').countDocuments(filter),
   ]);
   return { items: items.reverse(), page: page.data, pages: Math.max(1, Math.ceil(total / 50)) };
@@ -18,14 +18,49 @@ export async function sendMessage(db, config, inquiry, role, email, body) {
   if (!parsed.success) throw new ApiError(422, 'INVALID_MESSAGE', 'Enter a message of 1–5000 characters.');
   const { key, text } = parsed.data;
   const _id = tokenHash(`${role}:${email}:${inquiry.reference}:${key}`);
-  const document = { _id, key, text, role, reference: inquiry.reference, createdAt: new Date(), outboxPending: true,
+  const now = new Date();
+  const document = { _id, key, text, role, reference: inquiry.reference, createdAt: now, outboxPending: true,
     recipients: role === 'team' ? [inquiry.email] : [...new Set(config.teamEmails)],
+    readByAdmin: role === 'team',
+    readByCustomer: role === 'customer',
   };
-  try { await db.collection('messages').insertOne(document); }
-  catch (error) {
+  try {
+    await db.collection('messages').insertOne(document);
+  } catch (error) {
     if (error.code !== 11000) throw error;
     const previous = await db.collection('messages').findOne({ _id });
     if (!previous || previous.text !== text) throw new ApiError(409, 'MESSAGE_CONFLICT', 'This retry has different text. Refresh before sending.');
   }
+
+  // Update inquiry with unread count and latest message snippet
+  const snippet = text.slice(0, 140);
+  if (role === 'customer') {
+    await db.collection('inquiries').updateOne(
+      { reference: inquiry.reference },
+      {
+        $inc: { unreadCount: 1 },
+        $set: {
+          lastMessageAt: now,
+          lastMessageRole: 'customer',
+          lastMessageSnippet: snippet,
+          updatedAt: now,
+        },
+      }
+    );
+  } else {
+    await db.collection('inquiries').updateOne(
+      { reference: inquiry.reference },
+      {
+        $set: {
+          unreadCount: 0,
+          lastMessageAt: now,
+          lastMessageRole: 'team',
+          lastMessageSnippet: snippet,
+          updatedAt: now,
+        },
+      }
+    );
+  }
+
   return { saved: true };
 }

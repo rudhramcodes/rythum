@@ -73,7 +73,7 @@ export default function Conversation({ reference, audience, onExpired, realtime:
         const mine = message.role === ownRole;
         return <li key={`${message.role}:${message.key}`}>
           {newDay && <div className="chat-day">{day}</div>}
-          <div className={`chat-message ${mine ? 'is-mine' : 'is-theirs'}`}><span className="chat-sender">{mine ? 'You' : message.role === 'team' ? 'Rythum’s team' : 'Customer'}</span><div className="chat-bubble"><p>{message.text}</p><div className="chat-message-meta"><time dateTime={message.createdAt} title={date.toLocaleString(undefined, { hour12: true })}>{date.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit', hour12: true })}</time>{mine && <Check size={13} aria-label="Sent" />}</div></div></div>
+          <div className={`chat-message ${mine ? 'is-mine' : 'is-theirs'}`}><span className="chat-sender">{mine ? 'You' : message.role === 'team' ? 'Rythum’s team' : 'Customer'}{!mine && audience === 'admin' && message.readByAdmin === false && <span className="chat-unread-indicator">New</span>}</span><div className="chat-bubble"><p>{message.text}</p><div className="chat-message-meta"><time dateTime={message.createdAt} title={date.toLocaleString(undefined, { hour12: true })}>{date.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit', hour12: true })}</time>{mine && <Check size={13} aria-label="Sent" />}</div></div></div>
         </li>;
       })}</ol>}
     </div>

@@ -12,7 +12,7 @@ import InquiryManagement from './InquiryManagement';
 import './admin.css';
 
 
-const statuses = ['All', 'New', 'In discussion', 'Quoted', 'Confirmed', 'Closed'];
+const statuses = ['All', 'Unread', 'New', 'In discussion', 'Quoted', 'Confirmed', 'Closed'];
 const formatDate = value => value ? new Date(value.length === 10 ? `${value}T12:00:00` : value).toLocaleDateString('en', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Not specified';
 
 function RefreshButton({ busy, onRefresh }) {
@@ -420,11 +420,11 @@ function Security({ user, onExpired }) {
   );
 }
 
-function InquiryInbox({ onExpired }) {
+function InquiryInbox({ onExpired, onUnreadChange }) {
   const realtime = useRealtime('admin', onExpired);
   const [drafts, setDrafts] = useState({});
   const [filter, setFilter] = useState({ q: '', status: 'All', page: 1 });
-  const [result, setResult] = useState({ items: [], total: 0, pages: 1 });
+  const [result, setResult] = useState({ items: [], total: 0, totalUnread: 0, pages: 1 });
   const [busy, setBusy] = useState(true);
   const [error, setError] = useState('');
   const [refresh, setRefresh] = useState(0);
@@ -435,12 +435,15 @@ function InquiryInbox({ onExpired }) {
 
   useEffect(() => {
     const controller = new AbortController();
-    adminRequest(`admin/inquiries?${new URLSearchParams(filter)}`, { signal: controller.signal }).then(setResult).catch(error => {
+    adminRequest(`admin/inquiries?${new URLSearchParams(filter)}`, { signal: controller.signal }).then(data => {
+      setResult(data);
+      if (typeof data.totalUnread === 'number') onUnreadChange?.(data.totalUnread);
+    }).catch(error => {
       if (controller.signal.aborted) return;
       if (error.status === 401) onExpired(); else setError(error.message);
     }).finally(() => { if (!controller.signal.aborted) setBusy(false); });
     return () => controller.abort();
-  }, [filter, refresh, onExpired, realtime.sequence]);
+  }, [filter, refresh, onExpired, realtime.sequence, onUnreadChange]);
 
   useEffect(() => {
     if (!selected) return;
@@ -605,22 +608,52 @@ function InquiryInbox({ onExpired }) {
       </div>
     ) : (
       <div className="admin-inquiry-list">
-        {result.items.map(item => (
-          <button
-            type="button"
-            className="admin-inquiry-row"
-            key={item.reference}
-            onClick={() => { setInquiry(null); setDetailError(''); setSelected(item.reference); }}
-          >
-            <div>
-              <strong>{item.name}</strong>
-              <span>{item.eventType} · {item.city}</span>
-            </div>
-            <span className="admin-status">{item.status}</span>
-            <time dateTime={item.createdAt}>{formatDate(item.createdAt)}</time>
-            <ArrowRight size={18} aria-hidden="true" />
-          </button>
-        ))}
+        {result.items.map(item => {
+          const unreadCount = item.unreadCount || 0;
+          const isUnread = unreadCount > 0;
+          return (
+            <button
+              type="button"
+              className={`admin-inquiry-row ${isUnread ? 'is-unread' : ''}`}
+              key={item.reference}
+              onClick={() => {
+                if (isUnread) {
+                  setResult(prev => ({
+                    ...prev,
+                    items: prev.items.map(it => it.reference === item.reference ? { ...it, unreadCount: 0 } : it),
+                    totalUnread: Math.max(0, (prev.totalUnread || 0) - unreadCount),
+                  }));
+                  onUnreadChange?.(prev => Math.max(0, (typeof prev === 'number' ? prev : 0) - unreadCount));
+                  adminRequest(`admin/inquiries/${encodeURIComponent(item.reference)}/read`, { method: 'POST', body: '{}' }).catch(() => {});
+                }
+                setInquiry(null);
+                setDetailError('');
+                setSelected(item.reference);
+              }}
+            >
+              <div className="admin-inquiry-col-info">
+                <div className="admin-inquiry-heading-row">
+                  <strong>{item.name}</strong>
+                  {isUnread && (
+                    <span className="admin-unread-badge" title={`${unreadCount} unread message${unreadCount > 1 ? 's' : ''}`}>
+                      <span className="admin-unread-dot" aria-hidden="true" />
+                      <span>{item.lastMessageRole === 'customer' ? (unreadCount > 1 ? `${unreadCount} new replies` : 'New reply') : `${unreadCount} new`}</span>
+                    </span>
+                  )}
+                </div>
+                <span className="admin-inquiry-meta">{item.eventType} · {item.city}</span>
+                {item.lastMessageSnippet && (
+                  <p className="admin-inquiry-snippet">
+                    <span className="admin-snippet-role">{item.lastMessageRole === 'customer' ? 'Client:' : 'Team:'}</span> “{item.lastMessageSnippet}”
+                  </p>
+                )}
+              </div>
+              <span className="admin-status">{item.status}</span>
+              <time dateTime={item.lastMessageAt || item.createdAt}>{formatDate(item.lastMessageAt || item.createdAt)}</time>
+              <ArrowRight size={18} aria-hidden="true" />
+            </button>
+          );
+        })}
       </div>
     )}
 
@@ -637,7 +670,7 @@ function InquiryInbox({ onExpired }) {
 }
 
 
-function AdminNav({ screen, setScreen }) {
+function AdminNav({ screen, setScreen, unreadCount = 0 }) {
   const [slider, setSlider] = useState({ left: 0, width: 0, ready: false });
   const [shuttle, setShuttle] = useState({ left: 0, width: 0, active: false });
   const inboxRef = useRef(null);
@@ -658,7 +691,7 @@ function AdminNav({ screen, setScreen }) {
     updateSlider();
     window.addEventListener('resize', updateSlider);
     return () => window.removeEventListener('resize', updateSlider);
-  }, [updateSlider]);
+  }, [updateSlider, unreadCount]);
 
   return (
     <nav
@@ -689,7 +722,14 @@ function AdminNav({ screen, setScreen }) {
         onMouseEnter={e => setShuttle({ left: e.currentTarget.offsetLeft, width: e.currentTarget.offsetWidth, active: true })}
         onFocus={e => setShuttle({ left: e.currentTarget.offsetLeft, width: e.currentTarget.offsetWidth, active: true })}
       >
-        Inquiries
+        <span className="admin-nav-item-inner">
+          <span>Inquiries</span>
+          {unreadCount > 0 && (
+            <span className="admin-nav-badge" aria-label={`${unreadCount} unread`}>
+              {unreadCount}
+            </span>
+          )}
+        </span>
       </button>
       <button
         ref={securityRef}
@@ -710,6 +750,7 @@ export default function Admin() {
   const [configuration, setConfiguration] = useState(null);
   const [error, setError] = useState('');
   const [screen, setScreen] = useState('inbox');
+  const [unreadCount, setUnreadCount] = useState(0);
   async function loadSession() { const data = await adminRequest('admin/session'); setUser(data.user); }
   useEffect(() => {
     let active = true;
@@ -749,14 +790,14 @@ export default function Admin() {
         </div>
       </div>
     ) : !user ? <SignIn configuration={configuration} onSignIn={loadSession} /> : <>
-      <header className="admin-header"><a href="/" className="admin-wordmark">RYTHUM SHASTRI<span>.</span></a><AdminNav screen={screen} setScreen={setScreen} /><button type="button" className="text-link" onClick={logout}><LogOut size={16} /> Sign out</button></header>
+      <header className="admin-header"><a href="/" className="admin-wordmark">RYTHUM SHASTRI<span>.</span></a><AdminNav screen={screen} setScreen={setScreen} unreadCount={unreadCount} /><button type="button" className="text-link" onClick={logout}><LogOut size={16} /> Sign out</button></header>
       <div className="admin-workspace">
         {screen === 'security' ? (
           <Security user={user} onExpired={expire} />
         ) : (
           <>
             <p className="admin-account">{user.email}</p>
-            <InquiryInbox onExpired={expire} />
+            <InquiryInbox onExpired={expire} onUnreadChange={setUnreadCount} />
           </>
         )}
       </div>
