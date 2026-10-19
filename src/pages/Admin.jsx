@@ -6,6 +6,7 @@ import SmoothField from '../components/booking/SmoothField';
 import Dropdown from '../components/booking/Dropdown';
 import CopyPill from '../components/CopyPill';
 import Conversation from './Conversation';
+import InquiryAttachments from './InquiryAttachments';
 import useRealtime from './useRealtime';
 import './portal.css';
 import InquiryManagement from './InquiryManagement';
@@ -527,6 +528,7 @@ function InquiryInbox({ onExpired, onUnreadChange }) {
           </div>
           <p>{inquiry.details}</p>
         </div>
+        <InquiryAttachments key={`attachments-${inquiry.reference}`} reference={inquiry.reference} audience="admin" onExpired={onExpired} realtime={realtime} />
         <Conversation key={`conversation-${inquiry.reference}`} reference={inquiry.reference} audience="admin" onExpired={onExpired} realtime={realtime} initialDraft={drafts[inquiry.reference] || ''} onDraftChange={value => setDrafts(current => ({ ...current, [inquiry.reference]: value }))} />
         <InquiryManagement key={inquiry.reference} inquiry={inquiry} onExpired={onExpired} onSaved={updated => { setInquiry(updated); setRefresh(value => value + 1); }} />
       </>

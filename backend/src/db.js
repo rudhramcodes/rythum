@@ -14,6 +14,7 @@ export async function prepareDatabase(db) {
     db.collection('notificationJobs').createIndex({ dedupeKey: 1 }, { unique: true }),
     db.collection('notificationJobs').createIndex({ status: 1, nextAttemptAt: 1 }),
     db.collection('inquiries').createIndex({ unreadCount: 1, createdAt: -1 }),
+    db.collection('attachments').createIndex({ reference: 1, createdAt: -1 }),
     db.collection('submissionLimits').createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 }),
   ]);
 }

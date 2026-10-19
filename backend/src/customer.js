@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs';
 import { json, Router } from 'express';
 import { rateLimit } from 'express-rate-limit';
 import { randomBytes } from 'node:crypto';
@@ -5,6 +6,7 @@ import { z } from 'zod';
 import { ApiError } from './validation.js';
 import { tokenHash, customerSession } from './customerAccess.js';
 import { conversation, sendMessage } from './conversations.js';
+import { attachmentUpload, listAttachments, saveAttachment, getAttachment, resolveAttachmentPath } from './attachments.js';
 
 const publicFields = { _id: 0, reference: 1, name: 1, eventType: 1, city: 1, date: 1, details: 1, status: 1, createdAt: 1 };
 export function customerRouter({ db, config, notify = () => {} }) {
@@ -14,11 +16,16 @@ export function customerRouter({ db, config, notify = () => {} }) {
   router.use((req, res, next) => {
     if (req.method === 'POST') {
       if (!config.origins.includes(req.get('Origin'))) throw new ApiError(403, 'ORIGIN_REQUIRED', 'Use the website to continue.');
-      if (!req.is('application/json')) throw new ApiError(415, 'JSON_REQUIRED', 'Send application/json.');
+      if (!req.is('multipart/form-data') && !req.is('application/json')) {
+        throw new ApiError(415, 'JSON_REQUIRED', 'Send application/json.');
+      }
     }
     next();
   });
-  router.use(json({ limit: '16kb' }));
+  router.use((req, res, next) => {
+    if (req.is('multipart/form-data')) return next();
+    return json({ limit: '16kb' })(req, res, next);
+  });
   const accessLimit = rateLimit({ windowMs: 15 * 60000, limit: 20, standardHeaders: 'draft-8', legacyHeaders: false });
   router.post('/request-link', accessLimit, async (req, res) => {
     if (config.SMTP_ENABLED !== 'true') throw new ApiError(503, 'MAIL_UNAVAILABLE', 'Email sign-in is unavailable. Please try again shortly.');
@@ -79,6 +86,30 @@ export function customerRouter({ db, config, notify = () => {} }) {
     const result = await sendMessage(db, config, req.inquiry, 'customer', req.customer.email, req.body);
     notify({ reference: req.inquiry.reference, email: req.customer.email, kind: 'message' });
     res.json(result);
+  });
+  router.get('/inquiries/:reference/attachments', async (req, res) => {
+    res.json({ attachments: await listAttachments(db, req.inquiry.reference) });
+  });
+  router.post('/inquiries/:reference/attachments', rateLimit({ windowMs: 60000, limit: 10, keyGenerator: req => req.customer._id, standardHeaders: 'draft-8', legacyHeaders: false }), attachmentUpload.single('file'), async (req, res) => {
+    if (!req.file) throw new ApiError(400, 'FILE_REQUIRED', 'Please select a file to upload.');
+    const saved = await saveAttachment(db, {
+      reference: req.inquiry.reference,
+      file: req.file,
+      role: 'customer',
+      email: req.customer.email,
+      label: req.body.label || 'Customer document',
+    });
+    notify({ reference: req.inquiry.reference, email: req.customer.email, kind: 'attachment' });
+    res.json({ attachment: saved });
+  });
+  router.get('/inquiries/:reference/attachments/:id/download', async (req, res) => {
+    const attachment = await getAttachment(db, req.inquiry.reference, req.params.id);
+    if (!attachment) throw new ApiError(404, 'NOT_FOUND', 'Attachment not found.');
+    const filePath = resolveAttachmentPath(attachment.fileName);
+    if (!existsSync(filePath)) throw new ApiError(404, 'FILE_NOT_FOUND', 'File not found on disk.');
+    res.setHeader('Content-Type', attachment.mimeType);
+    res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(attachment.originalName)}"`);
+    res.sendFile(filePath);
   });
   return router;
 }

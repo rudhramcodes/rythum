@@ -2,14 +2,16 @@ import { useCallback, useEffect, useState } from 'react';
 import { adminRequest } from './adminApi';
 import SmoothField from '../components/booking/SmoothField';
 import Conversation from './Conversation';
+import InquiryAttachments from './InquiryAttachments';
 import useRealtime from './useRealtime';
-import { ArrowLeft, ArrowRight, CalendarDays, ChevronRight, LogOut, Mail, MessageCircle, RefreshCw, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, ArrowRight, CalendarDays, ChevronRight, LogOut, Mail, MessageCircle, RefreshCw, ShieldCheck, Paperclip } from 'lucide-react';
 import '../components/booking/booking.css';
 import './admin.css';
 import './portal.css';
 
 export default function Portal() {
   const [drafts, setDrafts] = useState({});
+  const [activeTab, setActiveTab] = useState('chat');
   const [token, setToken] = useState(() => new URLSearchParams(window.location.hash.slice(1)).get('token') || '');
   const [customer, setCustomer] = useState(null);
   const [checking, setChecking] = useState(true);
@@ -77,9 +79,108 @@ export default function Portal() {
           <p className="portal-sidebar-footnote"><ShieldCheck size={15} /> Only you and the team</p>
         </aside>
         <div className="portal-chat-panel">{active ? <>
-          <header className="portal-chat-header"><button className="chat-icon portal-mobile-back" aria-label="Back to conversations" onClick={() => setSelected(null)}><ArrowLeft size={20} /></button><div className="portal-avatar" aria-hidden="true">RS</div><div className="portal-chat-title"><h2>Rythum’s team</h2><p>{active.eventType} · {active.city}</p></div><span className="portal-status">{active.status}</span></header>
-          <details className="portal-event-details"><summary>Event details <span>{active.date || 'Date to be decided'}</span></summary><div><p>{active.details}</p><p className="portal-reference">{active.reference}</p><p>An inquiry is not a confirmed booking.</p></div></details>
-          <Conversation key={active.reference} reference={active.reference} audience="customer" onExpired={expire} realtime={realtime} initialDraft={drafts[active.reference] || ''} onDraftChange={value => setDrafts(current => ({ ...current, [active.reference]: value }))} />
+          <header className="portal-chat-header">
+            <button className="chat-icon portal-mobile-back" aria-label="Back to conversations" onClick={() => setSelected(null)}>
+              <ArrowLeft size={20} />
+            </button>
+            <div className="portal-avatar" aria-hidden="true">RS</div>
+            <div className="portal-chat-title">
+              <h2>Rythum’s team</h2>
+              <p>{active.eventType} · {active.city}</p>
+            </div>
+            <span className="portal-status">{active.status}</span>
+          </header>
+
+          {/* Apple iOS-Style Segmented Navigation Bar */}
+          <div className="portal-nav-bar" role="tablist" aria-label="Inquiry Navigation">
+            <div className="portal-segmented-control">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={activeTab === 'chat'}
+                className={`portal-tab-pill ${activeTab === 'chat' ? 'is-active' : ''}`}
+                onClick={() => setActiveTab('chat')}
+              >
+                <MessageCircle size={15} aria-hidden="true" />
+                <span>Conversation</span>
+              </button>
+
+              <button
+                type="button"
+                role="tab"
+                aria-selected={activeTab === 'documents'}
+                className={`portal-tab-pill ${activeTab === 'documents' ? 'is-active' : ''}`}
+                onClick={() => setActiveTab('documents')}
+              >
+                <Paperclip size={15} aria-hidden="true" />
+                <span>Documents & Files</span>
+              </button>
+
+              <button
+                type="button"
+                role="tab"
+                aria-selected={activeTab === 'details'}
+                className={`portal-tab-pill ${activeTab === 'details' ? 'is-active' : ''}`}
+                onClick={() => setActiveTab('details')}
+              >
+                <CalendarDays size={15} aria-hidden="true" />
+                <span>Event Details</span>
+              </button>
+            </div>
+          </div>
+
+          {activeTab === 'chat' ? (
+            <Conversation
+              key={active.reference}
+              reference={active.reference}
+              audience="customer"
+              onExpired={expire}
+              realtime={realtime}
+              initialDraft={drafts[active.reference] || ''}
+              onDraftChange={value => setDrafts(current => ({ ...current, [active.reference]: value }))}
+            />
+          ) : activeTab === 'documents' ? (
+            <div className="portal-tab-content portal-documents-pane">
+              <InquiryAttachments
+                key={`portal-att-${active.reference}`}
+                reference={active.reference}
+                audience="customer"
+                onExpired={expire}
+                realtime={realtime}
+              />
+            </div>
+          ) : (
+            <div className="portal-tab-content portal-details-pane">
+              <div className="portal-detail-card">
+                <h3>Event Overview</h3>
+                <dl className="portal-detail-grid">
+                  <div>
+                    <dt>Event Type</dt>
+                    <dd>{active.eventType}</dd>
+                  </div>
+                  <div>
+                    <dt>City / Venue</dt>
+                    <dd>{active.city}</dd>
+                  </div>
+                  <div>
+                    <dt>Proposed Date</dt>
+                    <dd>{active.date ? new Date(`${active.date}T12:00:00`).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' }) : 'Date to be decided'}</dd>
+                  </div>
+                  <div>
+                    <dt>Reference ID</dt>
+                    <dd className="portal-mono-ref">{active.reference}</dd>
+                  </div>
+                </dl>
+
+                {active.details && (
+                  <div className="portal-brief-box">
+                    <h4>Event Brief</h4>
+                    <p>{active.details}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </> : <div className="portal-select-chat"><MessageCircle size={42} strokeWidth={1.2} /><h2>A little planning.<br />A great night.</h2><p>Select an inquiry to chat with the team and keep your event details together.</p></div>}</div>
       </div>
     </div>}

@@ -1,9 +1,11 @@
+import { existsSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
 import { rateLimit } from 'express-rate-limit';
 import { json, Router } from 'express';
 import { fromNodeHeaders } from 'better-auth/node';
 import { z } from 'zod';
 import { conversation, sendMessage } from './conversations.js';
+import { attachmentUpload, listAttachments, saveAttachment, getAttachment, deleteAttachment, resolveAttachmentPath } from './attachments.js';
 import { ApiError } from './validation.js';
 
 export const inquiryStatuses = ['New', 'In discussion', 'Quoted', 'Confirmed', 'Closed'];
@@ -135,6 +137,48 @@ export function adminRouter({ db, auth, config, notify = () => {} }) {
     const result = await sendMessage(db, config, inquiry, 'team', req.admin.email, req.body);
     notify({ reference: inquiry.reference, email: inquiry.email, kind: 'message' });
     res.json(result);
+  });
+  router.get('/inquiries/:reference/attachments', async (req, res) => {
+    const inquiry = await db.collection('inquiries').findOne({ reference: req.params.reference });
+    if (!inquiry) throw new ApiError(404, 'NOT_FOUND', 'Inquiry not found.');
+    res.json({ attachments: await listAttachments(db, inquiry.reference) });
+  });
+  router.post('/inquiries/:reference/attachments', (req, res, next) => {
+    if (!config.origins.includes(req.get('Origin'))) throw new ApiError(403, 'ORIGIN_REQUIRED', 'Use the admin website.');
+    next();
+  }, attachmentUpload.single('file'), async (req, res) => {
+    if (!req.file) throw new ApiError(400, 'FILE_REQUIRED', 'Please select a file to upload.');
+    const inquiry = await db.collection('inquiries').findOne({ reference: req.params.reference });
+    if (!inquiry) throw new ApiError(404, 'NOT_FOUND', 'Inquiry not found.');
+    const saved = await saveAttachment(db, {
+      reference: inquiry.reference,
+      file: req.file,
+      role: 'team',
+      email: req.admin.email,
+      label: req.body.label || 'Document',
+    });
+    notify({ reference: inquiry.reference, email: inquiry.email, kind: 'attachment' });
+    res.json({ attachment: saved });
+  });
+  router.get('/inquiries/:reference/attachments/:id/download', async (req, res) => {
+    const inquiry = await db.collection('inquiries').findOne({ reference: req.params.reference });
+    if (!inquiry) throw new ApiError(404, 'NOT_FOUND', 'Inquiry not found.');
+    const attachment = await getAttachment(db, inquiry.reference, req.params.id);
+    if (!attachment) throw new ApiError(404, 'NOT_FOUND', 'Attachment not found.');
+    const filePath = resolveAttachmentPath(attachment.fileName);
+    if (!existsSync(filePath)) throw new ApiError(404, 'FILE_NOT_FOUND', 'File not found on disk.');
+    res.setHeader('Content-Type', attachment.mimeType);
+    res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(attachment.originalName)}"`);
+    res.sendFile(filePath);
+  });
+  router.delete('/inquiries/:reference/attachments/:id', async (req, res) => {
+    if (!config.origins.includes(req.get('Origin'))) throw new ApiError(403, 'ORIGIN_REQUIRED', 'Use the admin website.');
+    const inquiry = await db.collection('inquiries').findOne({ reference: req.params.reference });
+    if (!inquiry) throw new ApiError(404, 'NOT_FOUND', 'Inquiry not found.');
+    const deleted = await deleteAttachment(db, inquiry.reference, req.params.id);
+    if (!deleted) throw new ApiError(404, 'NOT_FOUND', 'Attachment not found.');
+    notify({ reference: inquiry.reference, email: inquiry.email, kind: 'attachment' });
+    res.json({ ok: true });
   });
   return router;
 }
