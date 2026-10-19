@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { adminRequest } from './adminApi';
 import SmoothField from '../components/booking/SmoothField';
 import Conversation from './Conversation';
@@ -12,6 +12,9 @@ import './portal.css';
 export default function Portal() {
   const [drafts, setDrafts] = useState({});
   const [activeTab, setActiveTab] = useState('chat');
+  const segmentedRef = useRef(null);
+  const tabRefs = useRef({});
+  const [sliderStyle, setSliderStyle] = useState({ left: 0, width: 0, ready: false });
   const [token, setToken] = useState(() => new URLSearchParams(window.location.hash.slice(1)).get('token') || '');
   const [customer, setCustomer] = useState(null);
   const [checking, setChecking] = useState(true);
@@ -58,6 +61,32 @@ export default function Portal() {
     catch (error) { setError(error.message); }
     finally { setBusy(false); }
   }
+
+  useLayoutEffect(() => {
+    const updateSlider = () => {
+      const el = tabRefs.current[activeTab];
+      const container = segmentedRef.current;
+      if (el && container) {
+        const containerRect = container.getBoundingClientRect();
+        const elRect = el.getBoundingClientRect();
+        setSliderStyle({
+          left: elRect.left - containerRect.left,
+          width: elRect.width,
+          ready: true,
+        });
+      }
+    };
+
+    updateSlider();
+    document.fonts?.ready?.then(updateSlider);
+
+    if (typeof ResizeObserver !== 'undefined' && segmentedRef.current) {
+      const ro = new ResizeObserver(updateSlider);
+      ro.observe(segmentedRef.current);
+      return () => ro.disconnect();
+    }
+  }, [activeTab, selected?.reference]);
+
   return <main className={`portal-page ${customer && !token ? 'portal-signed-in' : ''}`}>
     <header className="portal-header"><a className="portal-home" href="/" aria-label="Back to website"><ArrowLeft size={17} /><span>Back to website</span></a><a href="/" className="portal-brand">RYTHUM SHASTRI<span>.</span></a>{customer && !token ? <button className="portal-logout" disabled={busy} onClick={logout}><LogOut size={16} /><span>Sign out</span></button> : <span className="portal-private"><ShieldCheck size={16} /> Private workspace</span>}</header>
     {checking ? <div className="portal-checking" role="status">Opening your workspace…</div> : !customer || token ? <div className="portal-entry">
@@ -93,8 +122,18 @@ export default function Portal() {
 
           {/* Apple iOS-Style Segmented Navigation Bar */}
           <div className="portal-nav-bar" role="tablist" aria-label="Inquiry Navigation">
-            <div className="portal-segmented-control">
+            <div ref={segmentedRef} className="portal-segmented-control">
+              <span
+                className={`portal-slider-indicator ${sliderStyle.ready ? 'is-ready' : ''}`}
+                style={{
+                  width: `${sliderStyle.width}px`,
+                  transform: `translate3d(${sliderStyle.left}px, 0, 0)`,
+                }}
+                aria-hidden="true"
+              />
+
               <button
+                ref={el => { tabRefs.current['chat'] = el; }}
                 type="button"
                 role="tab"
                 aria-selected={activeTab === 'chat'}
@@ -106,6 +145,7 @@ export default function Portal() {
               </button>
 
               <button
+                ref={el => { tabRefs.current['documents'] = el; }}
                 type="button"
                 role="tab"
                 aria-selected={activeTab === 'documents'}
@@ -117,6 +157,7 @@ export default function Portal() {
               </button>
 
               <button
+                ref={el => { tabRefs.current['details'] = el; }}
                 type="button"
                 role="tab"
                 aria-selected={activeTab === 'details'}
@@ -129,58 +170,60 @@ export default function Portal() {
             </div>
           </div>
 
-          {activeTab === 'chat' ? (
-            <Conversation
-              key={active.reference}
-              reference={active.reference}
-              audience="customer"
-              onExpired={expire}
-              realtime={realtime}
-              initialDraft={drafts[active.reference] || ''}
-              onDraftChange={value => setDrafts(current => ({ ...current, [active.reference]: value }))}
-            />
-          ) : activeTab === 'documents' ? (
-            <div className="portal-tab-content portal-documents-pane">
-              <InquiryAttachments
-                key={`portal-att-${active.reference}`}
+          <div key={activeTab} className="portal-tab-content-wrap">
+            {activeTab === 'chat' ? (
+              <Conversation
+                key={active.reference}
                 reference={active.reference}
                 audience="customer"
                 onExpired={expire}
                 realtime={realtime}
+                initialDraft={drafts[active.reference] || ''}
+                onDraftChange={value => setDrafts(current => ({ ...current, [active.reference]: value }))}
               />
-            </div>
-          ) : (
-            <div className="portal-tab-content portal-details-pane">
-              <div className="portal-detail-card">
-                <h3>Event Overview</h3>
-                <dl className="portal-detail-grid">
-                  <div>
-                    <dt>Event Type</dt>
-                    <dd>{active.eventType}</dd>
-                  </div>
-                  <div>
-                    <dt>City / Venue</dt>
-                    <dd>{active.city}</dd>
-                  </div>
-                  <div>
-                    <dt>Proposed Date</dt>
-                    <dd>{active.date ? new Date(`${active.date}T12:00:00`).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' }) : 'Date to be decided'}</dd>
-                  </div>
-                  <div>
-                    <dt>Reference ID</dt>
-                    <dd className="portal-mono-ref">{active.reference}</dd>
-                  </div>
-                </dl>
-
-                {active.details && (
-                  <div className="portal-brief-box">
-                    <h4>Event Brief</h4>
-                    <p>{active.details}</p>
-                  </div>
-                )}
+            ) : activeTab === 'documents' ? (
+              <div className="portal-tab-content portal-documents-pane">
+                <InquiryAttachments
+                  key={`portal-att-${active.reference}`}
+                  reference={active.reference}
+                  audience="customer"
+                  onExpired={expire}
+                  realtime={realtime}
+                />
               </div>
-            </div>
-          )}
+            ) : (
+              <div className="portal-tab-content portal-details-pane">
+                <div className="portal-detail-card">
+                  <h3>Event Overview</h3>
+                  <dl className="portal-detail-grid">
+                    <div>
+                      <dt>Event Type</dt>
+                      <dd>{active.eventType}</dd>
+                    </div>
+                    <div>
+                      <dt>City / Venue</dt>
+                      <dd>{active.city}</dd>
+                    </div>
+                    <div>
+                      <dt>Proposed Date</dt>
+                      <dd>{active.date ? new Date(`${active.date}T12:00:00`).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' }) : 'Date to be decided'}</dd>
+                    </div>
+                    <div>
+                      <dt>Reference ID</dt>
+                      <dd className="portal-mono-ref">{active.reference}</dd>
+                    </div>
+                  </dl>
+
+                  {active.details && (
+                    <div className="portal-brief-box">
+                      <h4>Event Brief</h4>
+                      <p>{active.details}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
         </> : <div className="portal-select-chat"><MessageCircle size={42} strokeWidth={1.2} /><h2>A little planning.<br />A great night.</h2><p>Select an inquiry to chat with the team and keep your event details together.</p></div>}</div>
       </div>
     </div>}
