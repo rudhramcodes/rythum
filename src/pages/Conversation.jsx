@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { ArrowDown, ArrowLeft, ArrowRight, Check, MessageCircle, RefreshCw, Send } from 'lucide-react';
 import { adminRequest } from './adminApi';
 import useRealtime from './useRealtime';
+import SmoothField from '../components/booking/SmoothField';
 
 export default function Conversation({ reference, audience, onExpired, realtime: shared, initialDraft = '', onDraftChange }) {
   const local = useRealtime(audience, onExpired, !shared);
@@ -81,7 +82,7 @@ export default function Conversation({ reference, audience, onExpired, realtime:
     {error && <div className="chat-error" role="alert">{error} <button type="button" onClick={() => reload()}>Refresh</button></div>}
     <form className="chat-compose" onSubmit={send}>
       <label className="sr-only" htmlFor={`reply-${reference}`}>{audience === 'admin' ? 'Message to customer' : 'Message to Rythum’s team'}</label>
-      <div className="chat-compose-box"><textarea id={`reply-${reference}`} ref={input} value={text} onChange={event => draft(event.target.value)} onKeyDown={event => {
+      <div className="chat-compose-box"><SmoothField multiline id={`reply-${reference}`} ref={input} value={text} onChange={event => draft(event.target.value)} onKeyDown={event => {
         if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing && window.matchMedia('(pointer: fine)').matches) { event.preventDefault(); event.currentTarget.form.requestSubmit(); }
       }} disabled={sending} rows={1} required maxLength={5000} placeholder={audience === 'admin' ? 'Reply to the customer…' : 'Message Rythum’s team…'} /><button className="chat-send" disabled={sending || !text.trim()} type="submit" aria-label={sending ? 'Sending message' : 'Send message'}><Send size={19} /></button></div>
       <div className="chat-compose-footer"><span>{audience === 'admin' ? 'Visible to customer · private notes are separate' : 'Your conversation with Rythum’s team'}</span><span role="status">{sending ? 'Sending…' : text.length > 4500 ? `${text.length}/5000` : notice}</span></div>

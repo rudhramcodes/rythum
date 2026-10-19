@@ -136,3 +136,13 @@
   .chat-message { animation: chat-arrive .18s ease-out; }
   @keyframes chat-arrive { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 }
+
+.chat-compose-box .smooth-field-wrapper { flex: 1; min-width: 0; }
+.chat-compose-box .smooth-field { position: relative; overflow: hidden; }
+.chat-compose-box .smooth-field-mirror { position: absolute; top: 0; left: 0; visibility: hidden; pointer-events: none; border-style: solid; }
+.chat-compose-box .smooth-field-caret { position: absolute; top: 0; left: 0; width: 2px; background: var(--accent); pointer-events: none; opacity: 0; }
+.chat-compose-box textarea.has-smooth-caret { caret-color: transparent; }
+@media (prefers-reduced-motion: reduce) {
+  .chat-compose-box textarea.has-smooth-caret { caret-color: var(--accent); }
+  .chat-compose-box .smooth-field-caret { display: none; }
+}

@@ -1,8 +1,9 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useImperativeHandle, useRef } from 'react';
 import gsap from 'gsap';
 
-export default function SmoothField({ multiline = false, error = '', type, id, ...props }) {
+export default function SmoothField({ ref, multiline = false, error = '', type, id, ...props }) {
   const field = useRef(null);
+  useImperativeHandle(ref, () => field.current, []);
   const caret = useRef(null);
   const mirror = useRef(null);
   const Field = multiline ? 'textarea' : 'input';
