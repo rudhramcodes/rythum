@@ -20,7 +20,7 @@ export async function saveInquiry({ db, config }, input, key, now = new Date()) 
   const normalizedEmail = details.email.toLowerCase();
   const activeExisting = await inquiries.findOne({
     email: normalizedEmail,
-    status: { $in: ['New', 'Under Review'] },
+    status: { $in: ['New', 'Under Review', 'In discussion', 'Quoted'] },
   });
   if (activeExisting) {
     throw new ApiError(

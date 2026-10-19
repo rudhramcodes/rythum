@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { customerLink } from './customerAccess.js';
 import nodemailer from 'nodemailer';
 import { renderCustomerEmail, renderTeamEmail } from './emailTemplate.js';
 
@@ -13,6 +14,7 @@ export async function queueNotifications(db) {
         await jobs.updateOne({ dedupeKey }, { $setOnInsert: {
           ...recipient, inquiryId: inquiry._id, reference: inquiry.reference,
           inquiryDetails: {
+            reference: inquiry.reference,
             name: inquiry.name,
             email: inquiry.email,
             phone: inquiry.phone,
@@ -32,6 +34,16 @@ export async function queueNotifications(db) {
     // A crash before this update is safe: retrying never resets an existing job.
     await inquiries.updateOne({ _id: inquiry._id }, { $set: { outboxPending: false } });
   }
+  for await (const message of db.collection('messages').find({ outboxPending: true }).limit(25)) {
+    for (const to of message.recipients) {
+      const dedupeKey = `message:${message._id}:${to}`;
+      try {
+        await jobs.updateOne({ dedupeKey }, { $setOnInsert: { dedupeKey, to, kind: message.role === 'team' ? 'customer-message' : 'team-message', reference: message.reference, status: 'pending', attempts: 0, nextAttemptAt: message.createdAt, createdAt: message.createdAt } }, { upsert: true });
+      } catch (error) { if (error.code !== 11000) throw error; }
+    }
+    await db.collection('messages').updateOne({ _id: message._id }, { $set: { outboxPending: false } });
+  }
+
 }
 
 export function createMailTransport(config) {
@@ -65,14 +77,29 @@ export async function deliverNextJob(db, transport, config, now = new Date()) {
     $inc: { attempts: 1 },
   }, { sort: { nextAttemptAt: 1 }, returnDocument: 'after' });
   if (!job) return false;
-  const customer = job.kind === 'acknowledgement';
-  const inquiryData = job.inquiryDetails || (await db.collection('inquiries').findOne({ _id: job.inquiryId })) || { reference: job.reference };
-  const template = customer ? renderCustomerEmail(inquiryData) : renderTeamEmail(inquiryData);
+  const customer = ['acknowledgement', 'customer-access', 'customer-message'].includes(job.kind);
+  const inquiryData = job.inquiryDetails ? { ...job.inquiryDetails, reference: job.reference } : (job.inquiryId ? await db.collection('inquiries').findOne({ _id: job.inquiryId }) : null) || { reference: job.reference };
   let outcome;
   try {
+    if (job.kind === 'customer-access' && !await db.collection('inquiries').findOne({ email: job.to }, { projection: { _id: 1 } })) {
+      await jobs.updateOne({ _id: job._id, lockId }, { $set: { status: 'skipped', updatedAt: now }, $unset: { lockId: '', leaseUntil: '' } });
+      return true;
+    }
+    let template;
+    if (job.kind === 'customer-access') {
+      const url = await customerLink(db, config, job.to);
+      template = { subject: 'Your inquiry sign-in link', text: `Sign in to your Rythum Shastri inquiry portal:\n\n${url}\n\nThis link expires in 15 minutes and works once. If you did not request it, ignore this email.` };
+    } else if (job.kind.endsWith('-message')) {
+      const url = new URL(customer ? '/portal' : '/admin', config.origins[0]).href;
+      template = { subject: 'New inquiry message', text: `There is a new message for inquiry ${job.reference}. Read and reply securely on the website:\n${url}\n\nPlease do not reply to this email.` };
+    } else {
+      const url = customer ? await customerLink(db, config, job.to) : new URL('/admin', config.origins[0]).href;
+      template = customer ? renderCustomerEmail(inquiryData, url) : renderTeamEmail(inquiryData, url);
+      template.text += `\n\n${customer ? 'View your inquiry (sign-in link expires in 15 minutes)' : 'Open admin inbox'}: ${url}\nReply through the website, not by email.`;
+    }
     const result = await transport.sendMail({
       from: { name: 'Rythum Shastri', address: config.MAIL_FROM },
-      replyTo: customer ? config.MAIL_REPLY_TO : (inquiryData.email || config.MAIL_REPLY_TO),
+      replyTo: config.MAIL_REPLY_TO,
       to: job.to,
       messageId: `<${job._id}@${config.MAIL_FROM.split('@')[1]}>`,
       subject: template.subject,

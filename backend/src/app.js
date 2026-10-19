@@ -7,11 +7,15 @@ import { inquirySchema, idempotencySchema, ApiError } from './validation.js';
 import { saveInquiry } from './inquiries.js';
 import { toNodeHandler } from 'better-auth/node';
 import { createAdminAuth } from './auth.js';
+import { customerRouter } from './customer.js';
 import { adminRouter } from './admin.js';
 
 export function createApp({ db, config, resetTransport }) {
   const app = express();
   const auth = createAdminAuth(db, config, { resetTransport });
+  app.locals.auth = auth;
+  app.locals.publish = async () => {};
+  const notify = event => { Promise.resolve(app.locals.publish(event)).catch(() => console.error('Realtime update unavailable.')); };
   app.disable('x-powered-by');
   app.set('trust proxy', config.TRUST_PROXY || false);
   app.use(helmet());
@@ -34,7 +38,8 @@ export function createApp({ db, config, resetTransport }) {
     if (req.method !== 'GET' && !config.origins.includes(req.get('Origin'))) return next(new ApiError(403, 'ORIGIN_REQUIRED', 'Use the admin website.'));
     return toNodeHandler(auth)(req, res, next);
   });
-  app.use('/api/admin', adminRouter({ db, auth, config }));
+  app.use('/api/customer', customerRouter({ db, config, notify }));
+  app.use('/api/admin', adminRouter({ db, auth, config, notify }));
   app.get('/api/health', async (req, res) => {
     await db.command({ ping: 1 });
     res.json({ status: 'ok' });
@@ -58,6 +63,7 @@ export function createApp({ db, config, resetTransport }) {
       return res.status(422).json({ error: { code: 'VALIDATION_ERROR', message: firstMessage || 'Please check the highlighted fields.', fields } });
     }
     const result = await saveInquiry({ db, config }, parsed.data, key.data);
+    if (!result.replayed) notify({ reference: result.reference, email: parsed.data.email, kind: 'inquiry' });
     res.status(result.replayed ? 200 : 201).json({ inquiry: result });
   });
   app.use((req, res) => res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Not found.' } }));

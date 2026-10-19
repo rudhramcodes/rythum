@@ -124,7 +124,7 @@ test('simultaneous distinct attempts cannot exceed the per-email limit', async (
   assert.equal(await db.collection('inquiries').countDocuments(), 3);
 });
 
-test('worker claims jobs once, records SMTP acceptance, and keeps all PII out of email bodies', async () => {
+test('worker claims jobs once and sends the approved templates with website reply links', async () => {
   await post();
   await queueNotifications(db);
   const sent = [];
@@ -134,7 +134,9 @@ test('worker claims jobs once, records SMTP acceptance, and keeps all PII out of
   assert.equal(sent.length, 2);
   assert.equal(await db.collection('notificationJobs').countDocuments({ status: 'sent' }), 2);
   assert.equal(await deliverNextJob(db, transport, mailConfig), false);
-  assert.ok(sent.every(mail => !mail.text.includes(valid.details) && !mail.text.includes(valid.name)));
+  assert.ok(sent.find(mail => mail.to === 'team@example.com').text.includes(valid.details));
+  assert.ok(sent.every(mail => !mail.html.includes('mailto:')));
+  assert.ok(sent.find(mail => mail.to === valid.email).text.includes('/portal#token='));
 });
 
 test('transient SMTP failure retries later, permanent/ambiguous sends and expired leases are not blindly retried', async () => {

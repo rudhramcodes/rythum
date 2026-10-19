@@ -5,6 +5,10 @@ import { adminRequest } from './adminApi';
 import SmoothField from '../components/booking/SmoothField';
 import Dropdown from '../components/booking/Dropdown';
 import CopyPill from '../components/CopyPill';
+import Conversation from './Conversation';
+import useRealtime from './useRealtime';
+import './portal.css';
+import InquiryManagement from './InquiryManagement';
 import './admin.css';
 
 
@@ -417,12 +421,13 @@ function Security({ user, onExpired }) {
 }
 
 function InquiryInbox({ onExpired }) {
+  const realtime = useRealtime('admin', onExpired);
+  const [drafts, setDrafts] = useState({});
   const [filter, setFilter] = useState({ q: '', status: 'All', page: 1 });
   const [result, setResult] = useState({ items: [], total: 0, pages: 1 });
   const [busy, setBusy] = useState(true);
   const [error, setError] = useState('');
   const [refresh, setRefresh] = useState(0);
-  const [refreshSpinning, setRefreshSpinning] = useState(false);
   const [selected, setSelected] = useState('');
   const [inquiry, setInquiry] = useState(null);
   const [detailError, setDetailError] = useState('');
@@ -435,7 +440,7 @@ function InquiryInbox({ onExpired }) {
       if (error.status === 401) onExpired(); else setError(error.message);
     }).finally(() => { if (!controller.signal.aborted) setBusy(false); });
     return () => controller.abort();
-  }, [filter, refresh, onExpired]);
+  }, [filter, refresh, onExpired, realtime.sequence]);
 
   useEffect(() => {
     if (!selected) return;
@@ -519,7 +524,8 @@ function InquiryInbox({ onExpired }) {
           </div>
           <p>{inquiry.details}</p>
         </div>
-        <p className="admin-hint">Status updates, internal notes and website replies are coming next.</p>
+        <Conversation key={`conversation-${inquiry.reference}`} reference={inquiry.reference} audience="admin" onExpired={onExpired} realtime={realtime} initialDraft={drafts[inquiry.reference] || ''} onDraftChange={value => setDrafts(current => ({ ...current, [inquiry.reference]: value }))} />
+        <InquiryManagement key={inquiry.reference} inquiry={inquiry} onExpired={onExpired} onSaved={updated => { setInquiry(updated); setRefresh(value => value + 1); }} />
       </>
     )}
   </section>;

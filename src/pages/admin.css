@@ -1443,3 +1443,19 @@
     display: none;
   }
 }
+.admin-management { margin-top: 32px; }
+.admin-management h3 { font-size: 26px; font-weight: 500; margin-bottom: 12px; }
+.admin-management .booking-form { margin-top: 28px; display: block; }
+.admin-management-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 24px; }
+.admin-management-grid .booking-dropdown { margin-top: 10px; }
+.admin-management-field { margin-block: 24px; }
+.admin-management .smooth-field input, .admin-management .smooth-field textarea { margin: 0; }
+.admin-management-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 24px; }
+.admin-history { margin-top: 48px; }
+.admin-history ol { list-style: none; padding: 0; display: grid; gap: 12px; }
+.admin-history li { background: #1a1f16; padding: 20px 24px; overflow-wrap: anywhere; }
+.admin-history p { margin: 8px 0; white-space: pre-wrap; }
+.admin-history .admin-history-meta { color: #a1a59e; font-size: 14px; }
+.admin-history-note { color: #eeefeb; }
+@media (max-width: 640px) { .admin-management-grid { grid-template-columns: minmax(0, 1fr); } .admin-history li { padding: 16px; } }
+.admin-management input[type="hidden"] { display: none; }

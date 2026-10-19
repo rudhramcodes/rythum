@@ -121,3 +121,37 @@ test('password recovery is private, expiring, single-use and revokes sessions', 
   assert.equal((await post('reset-password', { token: readToken(), newPassword: password })).status, 200);
   assert.equal((await agent.get('/api/admin/session')).status, 401);
 });
+
+test('admin updates are private, validated, atomic and protected from stale edits', async () => {
+  const reference = `RS-${randomUUID().toUpperCase()}`;
+  await db.collection('inquiries').insertOne({ reference, idempotencyKey: randomUUID(), name: 'Organizer', email: 'organizer@example.com', status: 'New', createdAt: new Date() });
+  const path = `/api/admin/inquiries/${reference}`;
+  const body = { revision: 0, status: 'In discussion', followUp: '2027-01-20', closureReason: '', note: 'Private planning note' };
+  assert.equal((await request(app).post(path).set('Origin', origin).send(body)).status, 401);
+  const agent = request.agent(app);
+  assert.equal((await login(agent)).status, 200);
+  assert.equal((await agent.post(path).send(body)).status, 403);
+  assert.equal((await agent.post(path).set('Origin', 'https://evil.example').send(body)).status, 403);
+  for (const invalid of [{ status: 'Invalid' }, { followUp: '2027-02-30' }, { status: 'Closed' }, { note: 'x'.repeat(3001) }, { email: 'attacker@example.com' }]) {
+    assert.equal((await agent.post(path).set('Origin', origin).send({ ...body, ...invalid })).status, 422);
+  }
+  const results = await Promise.all([1, 2].map(() => agent.post(path).set('Origin', origin).send(body)));
+  assert.deepEqual(results.map(result => result.status).sort(), [200, 409]);
+  const detail = (await agent.get(path)).body.inquiry;
+  assert.equal(detail.status, 'In discussion');
+  assert.equal(detail.revision, 1);
+  assert.equal(detail.history.length, 1);
+  assert.equal(detail.history[0].actor, config.ADMIN_EMAIL);
+  assert.equal(detail.history[0].note, body.note);
+  assert.equal(detail.history[0].changes.status.from, 'New');
+  const list = (await agent.get('/api/admin/inquiries')).body.items[0];
+  assert.equal(list.history, undefined);
+  assert.equal((await request(app).get(path)).status, 401);
+  const close = await agent.post(path).set('Origin', origin).send({ ...body, revision: 1, status: 'Closed', closureReason: 'Event cancelled', note: '', followUp: '' });
+  assert.equal(close.status, 200);
+  assert.equal(close.body.inquiry.history.length, 2);
+  assert.equal(close.body.inquiry.followUp, '');
+  const noop = await agent.post(path).set('Origin', origin).send({ ...body, revision: 2, status: 'Closed', closureReason: 'Event cancelled', note: '', followUp: '' });
+  assert.equal(noop.body.inquiry.revision, 2);
+  assert.equal(await db.collection('notificationJobs').countDocuments({}), 0);
+});

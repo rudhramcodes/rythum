@@ -1,3 +1,5 @@
+import { createServer } from 'node:http';
+import { createRealtime } from './realtime.js';
 import { readConfig } from './config.js';
 import { connectDatabase } from './db.js';
 import { createApp } from './app.js';
@@ -7,7 +9,10 @@ try {
   const config = readConfig();
   database = await connectDatabase(config);
   const app = createApp({ ...database, config });
-  const server = app.listen(config.PORT, config.HOST, () => console.info(`API listening on port ${config.PORT}; SMTP worker runs separately.`));
+  const server = createServer(app);
+  const { io, publish } = createRealtime(server, { ...database, config, auth: app.locals.auth });
+  app.locals.publish = publish;
+  server.listen(config.PORT, config.HOST, () => console.info(`API and chat listening on port ${config.PORT}; SMTP worker runs separately.`));
   server.on('error', async () => {
     console.error('API failed to listen. Check HOST and PORT.');
     await database.client.close();
@@ -19,7 +24,7 @@ try {
     closing = true;
     const deadline = setTimeout(() => process.exit(1), 15000);
     deadline.unref();
-    server.close(async () => {
+    io.close(async () => {
       await database.client.close();
       clearTimeout(deadline);
     });

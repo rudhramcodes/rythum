@@ -34,13 +34,12 @@ function escapeHtml(str = '') {
     .replace(/'/g, '&#039;');
 }
 
-export function renderCustomerEmail(inquiry) {
+export function renderCustomerEmail(inquiry, portalUrl = `${BRAND.domain}/portal`) {
   const name = escapeHtml(inquiry.name || 'there');
   const reference = escapeHtml(inquiry.reference);
   const eventType = escapeHtml(inquiry.eventType || 'Live performance');
   const city = escapeHtml(inquiry.city || 'To be decided');
   const date = escapeHtml(formatDate(inquiry.date));
-  const details = escapeHtml(inquiry.details || '');
 
   const subject = `Inquiry received · ${reference}`;
 
@@ -117,15 +116,15 @@ export function renderCustomerEmail(inquiry) {
               <table width="100%" cellpadding="0" cellspacing="0" border="0">
                 <tr>
                   <td align="left" style="padding-top: 8px;">
-                    <a href="${BRAND.domain}" target="_blank" style="display: inline-block; background-color: ${BRAND.palette.accent}; color: ${BRAND.palette.accentText}; text-decoration: none; font-size: 14px; font-weight: 600; padding: 14px 24px; border-radius: 4px; letter-spacing: -0.01em;">
-                      Explore Rythum Shastri ↗
+                    <a href="${escapeHtml(portalUrl)}" target="_blank" style="display: inline-block; background-color: ${BRAND.palette.accent}; color: ${BRAND.palette.accentText}; text-decoration: none; font-size: 14px; font-weight: 600; padding: 14px 24px; border-radius: 4px; letter-spacing: -0.01em;">
+                      View your inquiry ↗
                     </a>
                   </td>
                 </tr>
               </table>
 
               <p style="margin: 28px 0 0; font-size: 12px; line-height: 1.5; color: ${BRAND.palette.subtle};">
-                An inquiry is not a confirmed booking. Dates, artist riders, and technical terms will be agreed with you directly.
+                Your sign-in link expires in 15 minutes. Request a new link from the inquiry portal if needed. Reply through the website. An inquiry is not a confirmed booking.
               </p>
             </td>
           </tr>
@@ -151,7 +150,7 @@ export function renderCustomerEmail(inquiry) {
   return { subject, text, html };
 }
 
-export function renderTeamEmail(inquiry) {
+export function renderTeamEmail(inquiry, adminUrl = `${BRAND.domain}/admin`) {
   const name = escapeHtml(inquiry.name || 'Website Client');
   const email = escapeHtml(inquiry.email || '');
   const phone = escapeHtml(inquiry.phone || 'Not provided');
@@ -163,7 +162,7 @@ export function renderTeamEmail(inquiry) {
 
   const subject = `⚡ New Booking Inquiry · ${inquiry.name || 'Client'} (${inquiry.eventType}) · ${reference}`;
 
-  const text = `NEW WEBSITE INQUIRY RECEIVED\n\nReference: ${reference}\nClient: ${inquiry.name} (${inquiry.email})\nPhone: ${inquiry.phone || 'None'}\nEvent: ${inquiry.eventType}\nCity: ${inquiry.city}\nDate: ${formatDate(inquiry.date)}\n\nEvent Brief:\n${inquiry.details || 'None'}\n\nReply directly to: ${inquiry.email}`;
+  const text = `NEW WEBSITE INQUIRY RECEIVED\n\nReference: ${reference}\nClient: ${inquiry.name} (${inquiry.email})\nPhone: ${inquiry.phone || 'None'}\nEvent: ${inquiry.eventType}\nCity: ${inquiry.city}\nDate: ${formatDate(inquiry.date)}\n\nEvent Brief:\n${inquiry.details || 'None'}\n\nRead and reply through the admin inbox on the website.`;
 
   const html = `<!DOCTYPE html>
 <html lang="en">
@@ -224,7 +223,7 @@ export function renderTeamEmail(inquiry) {
                 <tr>
                   <td style="padding: 12px 18px; font-size: 12px; color: ${BRAND.palette.muted}; border-bottom: 1px solid ${BRAND.palette.border};">Email</td>
                   <td style="padding: 12px 18px; font-size: 14px; color: ${BRAND.palette.accent}; border-bottom: 1px solid ${BRAND.palette.border};">
-                    <a href="mailto:${email}" style="color: ${BRAND.palette.accent}; text-decoration: none;">${email}</a>
+                    <a href="${escapeHtml(adminUrl)}" style="color: ${BRAND.palette.accent}; text-decoration: none;">${email}</a>
                   </td>
                 </tr>
                 <tr style="background-color: ${BRAND.palette.cardInner};">
@@ -257,8 +256,8 @@ export function renderTeamEmail(inquiry) {
               <table width="100%" cellpadding="0" cellspacing="0" border="0">
                 <tr>
                   <td align="left">
-                    <a href="mailto:${email}?subject=Regarding%20your%20inquiry%20${reference}" style="display: inline-block; background-color: ${BRAND.palette.accent}; color: ${BRAND.palette.accentText}; text-decoration: none; font-size: 14px; font-weight: 600; padding: 14px 24px; border-radius: 4px;">
-                      Reply to ${name} ↗
+                    <a href="${escapeHtml(adminUrl)}" style="display: inline-block; background-color: ${BRAND.palette.accent}; color: ${BRAND.palette.accentText}; text-decoration: none; font-size: 14px; font-weight: 600; padding: 14px 24px; border-radius: 4px;">
+                      Open admin inbox ↗
                     </a>
                   </td>
                 </tr>

@@ -2,7 +2,7 @@
 
 Implemented: Express 5 in plain JavaScript, MongoDB persistence, request validation, origin checks, rate limits, idempotent submissions, and an independent SMTP worker. The existing booking form now submits to the API and displays its saved reference. No email app is opened by submission.
 
-**Phase 1 is in progress.** A private `/admin` workspace now supports password sign-in, logout, concurrent sessions, password changes, signing out other devices, and a searchable/filterable read-only inquiry inbox. Google sign-in is implemented but requires OAuth credentials. MFA, status editing/notes, customer portal/conversations, files, calendar and document management remain pending. Inquiry list/detail APIs require the approved admin session; references alone grant no access.
+**Phase 1 is in progress.** A private `/admin` workspace now supports password sign-in, logout, concurrent sessions, password changes, signing out other devices, and a searchable/filterable inquiry inbox. Google sign-in was removed by the owner. Status updates, private notes, follow-up dates and change history are implemented. Customer magic-link access and conversations are implemented. MFA, files, calendar and document management remain pending. Inquiry list/detail APIs require the approved admin session; references alone grant no access.
 
 ## Admin setup and manual checks
 
@@ -14,7 +14,7 @@ Local owner: `notyourshastri@gmail.com`. The initial account has been created in
 4. In Security, change the password or sign out other devices. Changing the password signs out other sessions.
 5. Sign out, then refresh `/admin`; private inquiry data should no longer be accessible.
 
-Only code/API tests were run. No browser, real Google sign-in, booking submission or live-email checks were performed for this milestone.
+Only isolated code/API tests were run. No browser, real Google sign-in, booking submission or live-email checks were performed for this milestone.
 
 For a fresh database, generate a long random `AUTH_SECRET`, configure `ADMIN_EMAIL` and `AUTH_BASE_URL`, then run `npm run admin:create` with `ADMIN_BOOTSTRAP_PASSWORD` supplied securely in the process environment. Do not commit passwords, pass them in shell command arguments/history, or leave the bootstrap variable in `.env`. The command refuses to overwrite an existing account. An existing admin can change their password in the Security screen.
 
@@ -121,3 +121,33 @@ Still needed before integration/launch: MongoDB connection and restricted user, 
 The sign-in screen includes email recovery and a new-password form. Enable the existing SMTP configuration to send reset emails; no notification worker is needed for these messages. Reset links use the first `WEB_ORIGINS` entry, so put the canonical frontend origin first in production. Links expire after 15 minutes, work once, and revoke all sessions after a successful reset. The token is carried in the URL fragment and removed when the form opens. Passwords require at least 12 characters. Unknown addresses receive the same confirmation response.
 
 Manual checks: open `/admin`, check email/password keyboard and autofill on mobile, toggle password visibility, use Forgot password, follow the email link, and sign in with the new password. Confirm a used link cannot reset again. SMTP delivery and browser appearance are not covered by the isolated code tests.
+
+### Inquiry management
+
+Open an inquiry to change status, add an internal note or schedule/clear a follow-up date. Closed requires a reason. Save writes the changes and private history atomically in standalone MongoDB; conflicting edits from another session return 409 and the UI offers reload while preserving the draft note. These changes do not send customer emails or schedule automatic reminders yet. Follow-up dates are calendar dates; old saved dates can remain overdue. Shared-account history identifies the account, not individual team members.
+
+`POST /api/admin/inquiries/:reference` requires an admin session, exact allowed Origin and JSON `{revision,status,followUp,closureReason,note}`. Unknown fields are rejected. Legacy inquiries start at revision zero. History is admin-only and excluded from inbox lists/public receipts. The atomic embedded history has a 1000-entry limit; migrate storage before that volume.
+
+Manual checks: save a status/note/date and reload; close with/without a reason; clear the date; edit the same inquiry in two tabs and verify the second save reports conflict. No browser or live email checks were run.
+
+### Customer portal and conversations
+
+`/portal` uses email magic links, without Google or customer passwords. Booking acknowledgements include a fresh link; the footer and booking confirmation link to the portal. Return visitors enter the original inquiry email. Valid addresses receive the same HTTP response whether or not an inquiry exists. The worker sends access mail only when an inquiry exists, with at most three queued requests per address/hour and an additional per-IP limit.
+
+Start both API and `npm run worker` in `backend/`, with SMTP enabled. Put the canonical frontend origin first in `WEB_ORIGINS`; all email links use it. Tokens are random 256-bit values, stored only as SHA-256 hashes, expire in 15 minutes and are consumed atomically. A fragment carries the token; the page removes it and asks for an explicit confirmation to avoid link-scanner consumption. Sessions are separate from admin, HttpOnly/SameSite=Lax, Secure in production, expire after 24 hours and are revoked on logout. HTTPS frontend/API must share the production site as documented above. If a verification request loses its response, request a fresh link.
+
+Customers see only inquiries matching their verified email and their conversations. Projections exclude private notes, history, follow-up dates, closure reasons, hashes and notification internals. Ownership is checked for every message read/write. Admin replies are explicitly labelled customer-visible, separately from internal notes. Messages have bounded lengths, pagination and idempotent retries. Each saved message includes durable notification intent; the existing worker creates deduplicated generic new-message emails without copying conversation text. Messages remain saved if SMTP fails. Configure `TEAM_EMAILS` for incoming-message notifications.
+
+Customer endpoints: POST `/api/customer/request-link`, `/verify`, `/logout`; GET `/session`, `/inquiries`; GET/POST `/inquiries/:reference/messages`. Admin conversations use GET/POST `/api/admin/inquiries/:reference/messages`. Writes require exact permitted Origin and JSON. No endpoint accepts a reference alone as authentication.
+
+Manual checks (owner only): submit your own test inquiry; open the acknowledgment link and click Open my inquiries; verify only your inquiries appear; exchange messages between portal/admin; refresh to see updates; sign out and request a new link; verify a reused/expired link fails. Browser/live SMTP verification has NOT been performed. Socket.IO now refreshes conversations/inquiry lists automatically. Unread badges, attachments and customer profile changes remain pending. Code tests: `node --test test/customer.test.js test/admin.test.js` (temporary database, mocked SMTP).
+
+### Live chat (Socket.IO)
+
+Portal has an inquiry sidebar, mobile inbox/chat navigation, collapsible event details, message bubbles, timestamps, date grouping, in-memory per-inquiry drafts, pinned composer and a new-message jump. Admin uses the same chat component. Desktop Enter sends / Shift+Enter adds a line; mobile Enter adds a line. A single check means saved/sent, never read. Connection status describes the socket, not whether staff are online.
+
+Message writes continue through the validated, idempotent HTTP API; Socket.IO signals committed changes and the client fetches authorized data. This keeps one persistence/validation path. Saved messages catch up automatically on reconnect. Socket payloads contain only reference + change kind, never message bodies or private notes. Sessions are checked during connection and before each broadcast; revoked/expired sockets are disconnected. Customer sockets are placed only in their verified-email room. There is no client-controlled room-join API.
+
+Restart API and Vite after installing dependencies (`npm install` in root and backend). The Vite `/api` proxy now enables WebSocket upgrades. Browser chat uses WebSocket transport so Origin is always present, including through the development proxy. Production reverse proxy must forward polling and WebSocket upgrades for `/api/customer/realtime/` to the API, including Upgrade/Connection headers and original Origin. `VITE_API_URL` remains the API origin, not a Socket.IO path. Login cookies remain scoped to `/api/customer`; the realtime endpoint sits inside that path. Use the configured frontend origin and credentials, not wildcard CORS. [Socket.IO configuration](https://socket.io/docs/v4/server-options/).
+
+Run a single API process until a shared Socket.IO adapter is configured. SMTP worker still runs separately for emails; it is not required for chat delivery after login. No browser/live tests were run. Manual check: customer and admin in separate sessions; exchange messages, switch inquiries (draft stays), change status, scroll up while messages arrive, disconnect/reconnect networking, and check mobile keyboard/scroll behavior.

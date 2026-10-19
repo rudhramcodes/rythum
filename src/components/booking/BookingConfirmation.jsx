@@ -30,6 +30,7 @@ export default function BookingConfirmation({ receipt, onNewInquiry }) {
       <p id="booking-reference-help">Keep this handy when you contact us.</p>
     </div>
     <div className="booking-confirmation-actions">
+      <a className="text-link" href="/portal">View your inquiries <ArrowUpRight size={17} aria-hidden="true" /></a>
       <button type="button" className="text-link" onClick={onNewInquiry}>Send another inquiry <ArrowUpRight size={17} aria-hidden="true" /></button>
     </div>
     <p className="booking-confirmation-note">Your booking is not confirmed yet. Dates and availability will be agreed with you.</p>
