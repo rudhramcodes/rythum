@@ -29,7 +29,7 @@ export function createApp({ db, config, resetTransport }) {
     if (origin && !config.origins.includes(origin)) return next(new ApiError(403, 'ORIGIN_DENIED', 'This website is not allowed to submit requests.'));
     next();
   });
-  app.use(cors({ origin: config.origins, credentials: true, methods: ['GET', 'POST'], allowedHeaders: ['Content-Type', 'Idempotency-Key'], maxAge: 600 }));
+  app.use(cors({ origin: config.origins, credentials: true, methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'], allowedHeaders: ['Content-Type', 'Idempotency-Key'], maxAge: 600 }));
   const authLimit = rateLimit({ windowMs: 15 * 60 * 1000, limit: 30, standardHeaders: 'draft-8', legacyHeaders: false });
   app.all('/api/auth/*splat', authLimit, (req, res, next) => {
     if (!auth) return next(new ApiError(503, 'ADMIN_UNAVAILABLE', 'Admin authentication is not configured.'));

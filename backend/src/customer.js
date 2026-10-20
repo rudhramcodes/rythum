@@ -108,7 +108,8 @@ export function customerRouter({ db, config, notify = () => {} }) {
     const filePath = resolveAttachmentPath(attachment.fileName);
     if (!existsSync(filePath)) throw new ApiError(404, 'FILE_NOT_FOUND', 'File not found on disk.');
     res.setHeader('Content-Type', attachment.mimeType);
-    res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(attachment.originalName)}"`);
+    const disposition = req.query.inline === '1' ? 'inline' : 'attachment';
+    res.setHeader('Content-Disposition', `${disposition}; filename="${encodeURIComponent(attachment.originalName)}"`);
     res.sendFile(filePath);
   });
   return router;

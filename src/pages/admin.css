@@ -2197,6 +2197,21 @@
   transform: none !important;
 }
 
+.admin-attachment-btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+@keyframes adminSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.admin-spin {
+  animation: adminSpin 0.9s linear infinite;
+}
+
 @media (max-width: 640px) {
   .admin-attachment-item {
     flex-direction: column;

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   FileText, Image, Music, Paperclip, Download, Trash2,
-  UploadCloud, Check, AlertCircle, Filter
+  UploadCloud, Check, AlertCircle, Filter, Loader2
 } from 'lucide-react';
 import { adminRequest, getAttachmentDownloadUrl } from './adminApi';
 import Dropdown from '../components/booking/Dropdown';
@@ -74,6 +74,7 @@ export default function InquiryAttachments({ reference, audience = 'admin', onEx
   const [isDragging, setIsDragging] = useState(false);
   const [filterCategory, setFilterCategory] = useState('All');
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+  const [downloadingId, setDownloadingId] = useState(null);
   const fileInputRef = useRef(null);
   const dragCounter = useRef(0);
 
@@ -211,6 +212,39 @@ export default function InquiryAttachments({ reference, audience = 'admin', onEx
     }
   }
 
+  async function handleDownload(item) {
+    if (!item?._id || downloadingId === item._id) return;
+    setDownloadingId(item._id);
+    setError('');
+    try {
+      const url = getAttachmentDownloadUrl(audience, reference, item._id);
+      const res = await fetch(url, {
+        credentials: 'include',
+      });
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => null);
+        if (res.status === 401) {
+          onExpired?.();
+          throw new Error('Please sign in again to download files.');
+        }
+        throw new Error(errJson?.error?.message || errJson?.message || 'Download failed.');
+      }
+      const blob = await res.blob();
+      const objectUrl = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = objectUrl;
+      a.download = item.originalName || 'document';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => window.URL.revokeObjectURL(objectUrl), 2000);
+    } catch (err) {
+      setError(err.message || 'Failed to download file.');
+    } finally {
+      setDownloadingId(null);
+    }
+  }
+
   // Categories present in items for filter chips
   const presentCategories = ['All', ...new Set(items.map(it => it.label || 'Document'))];
   const filteredItems = filterCategory === 'All'
@@ -223,7 +257,7 @@ export default function InquiryAttachments({ reference, audience = 'admin', onEx
       const cleanTitle = att.label || 'Event Document';
       if (isImg) {
         return {
-          image: getAttachmentDownloadUrl(audience, reference, att._id),
+          image: `${getAttachmentDownloadUrl(audience, reference, att._id)}?inline=1`,
           title: cleanTitle,
           alt: cleanTitle
         };
@@ -382,8 +416,7 @@ export default function InquiryAttachments({ reference, audience = 'admin', onEx
               onItemClick={(item, index) => {
                 const target = items[index];
                 if (target) {
-                  const url = getAttachmentDownloadUrl(audience, reference, target._id);
-                  window.open(url, '_blank', 'noopener,noreferrer');
+                  handleDownload(target);
                 }
               }}
             />
@@ -496,17 +529,20 @@ export default function InquiryAttachments({ reference, audience = 'admin', onEx
                   </div>
 
                   <div className="admin-attachment-actions">
-                    <a
-                      href={downloadUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                    <button
+                      type="button"
                       className="admin-attachment-btn is-primary"
-                      title="Download or preview file"
-                      download={item.originalName}
+                      title={`Download ${item.originalName}`}
+                      disabled={downloadingId === item._id}
+                      onClick={() => handleDownload(item)}
                     >
-                      <Download size={14} aria-hidden="true" />
-                      <span>Download</span>
-                    </a>
+                      {downloadingId === item._id ? (
+                        <Loader2 size={14} className="admin-spin" aria-hidden="true" />
+                      ) : (
+                        <Download size={14} aria-hidden="true" />
+                      )}
+                      <span>{downloadingId === item._id ? 'Downloading…' : 'Download'}</span>
+                    </button>
 
                     {audience === 'admin' && (
                       isConfirming ? (
