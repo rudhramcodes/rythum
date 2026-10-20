@@ -1,3 +1,4 @@
+import { eventRouter } from './eventChanges.js';
 import { existsSync } from 'node:fs';
 import { json, Router } from 'express';
 import { rateLimit } from 'express-rate-limit';
@@ -82,6 +83,7 @@ export function customerRouter({ db, config, notify = () => {} }) {
     req.inquiry = inquiry;
     next();
   });
+  router.use('/inquiries/:reference/event', eventRouter({ db, config, audience: 'customer', notify }));
   router.get('/inquiries/:reference/messages', async (req, res) => res.json(await conversation(db, req.inquiry.reference, req.query)));
   router.post('/inquiries/:reference/messages', rateLimit({ windowMs: 60000, limit: 10, keyGenerator: req => req.customer._id, standardHeaders: 'draft-8', legacyHeaders: false }), async (req, res) => {
     const result = await sendMessage(db, config, req.inquiry, 'customer', req.customer.email, req.body);

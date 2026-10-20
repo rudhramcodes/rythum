@@ -6,7 +6,7 @@ import { isAvailableDate, localDate, monthDays } from './date';
 const months = Array.from({ length: 12 }, (_, value) => ({ value, label: new Intl.DateTimeFormat('en', { month: 'long' }).format(new Date(2024, value, 1)) }));
 const formatDate = value => new Date(`${value}T12:00:00`).toLocaleDateString('en', { day: 'numeric', month: 'long', year: 'numeric' });
 
-export default function DatePicker({ value, onChange, error, title = "Your event date" }) {
+export default function DatePicker({ value, onChange, error, id = 'booking-date', title = "Your event date" }) {
   const dialog = useRef(null);
   const trigger = useRef(null);
   const [open, setOpen] = useState(false);
@@ -54,15 +54,15 @@ export default function DatePicker({ value, onChange, error, title = "Your event
 
   return <div className="booking-date">
     <input type="hidden" name="date" value={value} />
-    <button id="booking-date" ref={trigger} className={`booking-control${value ? '' : ' is-placeholder'}`} type="button" aria-haspopup="dialog" aria-expanded={open} aria-invalid={Boolean(error)} aria-describedby={error ? 'booking-date-error' : 'booking-date-help'} onClick={show}>
+    <button id={id} ref={trigger} className={`booking-control${value ? '' : ' is-placeholder'}`} type="button" aria-haspopup="dialog" aria-expanded={open} aria-invalid={Boolean(error)} aria-describedby={error ? `${id}-error` : `${id}-help`} onClick={show}>
       {value ? formatDate(value) : 'Choose a date'}<CalendarDays size={19} />
     </button>
-    <p id="booking-date-help" className="booking-field-help">Optional · Today or a future date</p>
-    {error && <p id="booking-date-error" className="booking-field-error" role="alert">{error}</p>}
-    {open && <dialog ref={dialog} data-lenis-prevent className="booking-date-dialog" aria-labelledby="booking-date-title" onCancel={() => setOpen(false)} onClick={event => { if (event.target === dialog.current) setOpen(false); }}>
+    <p id={`${id}-help`} className="booking-field-help">Optional · Today or a future date</p>
+    {error && <p id={`${id}-error`} className="booking-field-error" role="alert">{error}</p>}
+    {open && <dialog ref={dialog} data-lenis-prevent className="booking-date-dialog" aria-labelledby={`${id}-title`} onCancel={() => setOpen(false)} onClick={event => { if (event.target === dialog.current) setOpen(false); }}>
       <div className="booking-date-panel" data-lenis-prevent>
         <div className="date-sheet-handle" aria-hidden="true" />
-        <div className="date-picker-heading"><div><h3 id="booking-date-title">{title}</h3><p>{draft ? formatDate(draft) : 'Find a day that works for you.'}</p></div><button type="button" className="date-icon-button" aria-label="Close date picker" onClick={() => setOpen(false)}><X size={20} /></button></div>
+        <div className="date-picker-heading"><div><h3 id={`${id}-title`}>{title}</h3><p>{draft ? formatDate(draft) : 'Find a day that works for you.'}</p></div><button type="button" className="date-icon-button" aria-label="Close date picker" onClick={() => setOpen(false)}><X size={20} /></button></div>
         <div className="date-month-controls">
           <button type="button" className="date-icon-button" disabled={!canGoBack} aria-label="Previous month" onClick={() => setView(new Date(year, month - 1, 1))}><ChevronLeft size={20} /></button>
           <Dropdown label="Month" value={month} options={months} onChange={next => setView(new Date(year, next, 1))} />

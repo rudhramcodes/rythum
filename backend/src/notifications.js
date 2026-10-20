@@ -34,6 +34,17 @@ export async function queueNotifications(db) {
     // A crash before this update is safe: retrying never resets an existing job.
     await inquiries.updateOne({ _id: inquiry._id }, { $set: { outboxPending: false } });
   }
+  for await (const inquiry of inquiries.find({ 'history.eventOutbox': true }).limit(25)) {
+    for (const entry of inquiry.history.filter(item => item.eventOutbox)) {
+      for (const to of entry.recipients) {
+        const dedupeKey = `event:${inquiry.reference}:${entry.id}:${to}`;
+        try {
+          await jobs.updateOne({ dedupeKey }, { $setOnInsert: { dedupeKey, to, kind: entry.eventChange.role === 'admin' ? 'customer-event' : 'team-event', reference: inquiry.reference, status: 'pending', attempts: 0, nextAttemptAt: entry.at, createdAt: entry.at } }, { upsert: true });
+        } catch (error) { if (error.code !== 11000) throw error; }
+      }
+      await inquiries.updateOne({ _id: inquiry._id, 'history.id': entry.id }, { $set: { 'history.$.eventOutbox': false } });
+    }
+  }
   for await (const message of db.collection('messages').find({ outboxPending: true }).limit(25)) {
     for (const to of message.recipients) {
       const dedupeKey = `message:${message._id}:${to}`;
@@ -77,7 +88,7 @@ export async function deliverNextJob(db, transport, config, now = new Date()) {
     $inc: { attempts: 1 },
   }, { sort: { nextAttemptAt: 1 }, returnDocument: 'after' });
   if (!job) return false;
-  const customer = ['acknowledgement', 'customer-access', 'customer-message'].includes(job.kind);
+  const customer = ['acknowledgement', 'customer-access', 'customer-message', 'customer-event'].includes(job.kind);
   const inquiryData = job.inquiryDetails ? { ...job.inquiryDetails, reference: job.reference } : (job.inquiryId ? await db.collection('inquiries').findOne({ _id: job.inquiryId }) : null) || { reference: job.reference };
   let outcome;
   try {
@@ -89,6 +100,9 @@ export async function deliverNextJob(db, transport, config, now = new Date()) {
     if (job.kind === 'customer-access') {
       const url = await customerLink(db, config, job.to);
       template = { subject: 'Your inquiry sign-in link', text: `Sign in to your Rythum Shastri inquiry portal:\n\n${url}\n\nThis link expires in 15 minutes and works once. If you did not request it, ignore this email.` };
+    } else if (job.kind.endsWith('-event')) {
+      const url = new URL(customer ? '/portal' : `/admin/inquiry-details/${job.reference}`, config.origins[0]).href;
+      template = { subject: 'Event details update', text: `There is an event details update for inquiry ${job.reference}. Sign in to review the request or decision:\n${url}\n\nPlease reply through the website.` };
     } else if (job.kind.endsWith('-message')) {
       const url = new URL(customer ? '/portal' : '/admin', config.origins[0]).href;
       template = { subject: 'New inquiry message', text: `There is a new message for inquiry ${job.reference}. Read and reply securely on the website:\n${url}\n\nPlease do not reply to this email.` };

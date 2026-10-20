@@ -1,3 +1,4 @@
+import { eventRouter } from './eventChanges.js';
 import { existsSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
 import { rateLimit } from 'express-rate-limit';
@@ -139,6 +140,7 @@ export function adminRouter({ db, auth, config, notify = () => {} }) {
     if (Object.keys(changes).some(key => key === 'status')) notify({ reference: current.reference, email: current.email, kind: 'status' });
     res.json({ inquiry });
   });
+  router.use('/inquiries/:reference/event', eventRouter({ db, config, audience: 'admin', notify }));
   router.get('/inquiries/:reference/messages', async (req, res) => {
     const inquiries = db.collection('inquiries');
     const inquiry = await inquiries.findOne({ reference: req.params.reference });

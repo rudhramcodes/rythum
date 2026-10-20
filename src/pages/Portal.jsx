@@ -4,6 +4,7 @@ import CopyPill from '../components/CopyPill';
 import SmoothField from '../components/booking/SmoothField';
 import Conversation from './Conversation';
 import InquiryNextStep from './InquiryNextStep';
+import EventDetailsEditor from './EventDetailsEditor';
 import InquiryAttachments from './InquiryAttachments';
 import useRealtime from './useRealtime';
 import { ArrowLeft, ArrowRight, CalendarDays, ChevronRight, LogOut, Mail, MessageCircle, RefreshCw, ShieldCheck, Paperclip } from 'lucide-react';
@@ -156,46 +157,47 @@ export default function Portal() {
                 onDraftChange={value => setDrafts(current => ({ ...current, [active.reference]: value }))}
               />
             </div>
-              <div role="tabpanel" id="portal-panel-documents" aria-labelledby="portal-tab-documents" hidden={activeTab !== 'documents'} className="portal-tab-content portal-documents-pane">
-                <InquiryAttachments
-                  key={`portal-att-${active.reference}`}
-                  reference={active.reference}
-                  audience="customer"
-                  onExpired={expire}
-                  realtime={realtime}
-                />
-              </div>
-              <div role="tabpanel" id="portal-panel-details" aria-labelledby="portal-tab-details" hidden={activeTab !== 'details'} className="portal-tab-content portal-details-pane">
-                <InquiryNextStep status={active.status} audience="customer" onConversation={() => { setActiveTab('chat'); tabRefs.current.chat?.focus(); }} />
-                <div className="portal-detail-card">
-                  <h3>Event overview</h3><p className="booking-field-help">{active.status === 'Confirmed' ? 'The team has marked this booking as confirmed. Discuss any changes in the conversation.' : active.status === 'Closed' ? 'This inquiry is closed. Your details are kept here for reference.' : 'These are your requested details. The team will confirm the arrangements with you.'}</p>
-                  <dl className="portal-detail-grid">
-                    <div>
-                      <dt>Event Type</dt>
-                      <dd>{active.eventType}</dd>
-                    </div>
-                    <div>
-                      <dt>Location</dt>
-                      <dd>{active.city}</dd>
-                    </div>
-                    <div>
-                      <dt>{active.status === 'Confirmed' ? 'Event date' : 'Proposed date'}</dt>
-                      <dd>{active.date ? new Date(`${active.date}T12:00:00`).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' }) : 'Date to be decided'}</dd>
-                    </div>
-                    <div>
-                      <dt>Reference ID</dt>
-                      <dd><CopyPill text={active.reference} label="Reference" monospace /></dd>
-                    </div>
-                  </dl>
+            <div role="tabpanel" id="portal-panel-documents" aria-labelledby="portal-tab-documents" hidden={activeTab !== 'documents'} className="portal-tab-content portal-documents-pane">
+              <InquiryAttachments
+                key={`portal-att-${active.reference}`}
+                reference={active.reference}
+                audience="customer"
+                onExpired={expire}
+                realtime={realtime}
+              />
+            </div>
+            <div role="tabpanel" id="portal-panel-details" aria-labelledby="portal-tab-details" hidden={activeTab !== 'details'} className="portal-tab-content portal-details-pane">
+              <InquiryNextStep status={active.status} audience="customer" onConversation={() => { setActiveTab('chat'); tabRefs.current.chat?.focus(); }} />
+              <div className="portal-detail-card">
+                <h3>Event overview</h3><p className="booking-field-help">{active.status === 'Confirmed' ? 'The team has marked this booking as confirmed. Discuss any changes in the conversation.' : active.status === 'Closed' ? 'This inquiry is closed. Your details are kept here for reference.' : 'These are your requested details. The team will confirm the arrangements with you.'}</p>
+                <dl className="portal-detail-grid">
+                  <div>
+                    <dt>Event Type</dt>
+                    <dd>{active.eventType}</dd>
+                  </div>
+                  <div>
+                    <dt>Location</dt>
+                    <dd>{active.city}</dd>
+                  </div>
+                  <div>
+                    <dt>{active.status === 'Confirmed' ? 'Event date' : 'Proposed date'}</dt>
+                    <dd>{active.date ? new Date(`${active.date}T12:00:00`).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' }) : 'Date to be decided'}</dd>
+                  </div>
+                  <div>
+                    <dt>Reference ID</dt>
+                    <dd><CopyPill text={active.reference} label="Reference" monospace /></dd>
+                  </div>
+                </dl>
 
-                  {active.details && (
-                    <div className="portal-brief-box">
-                      <h4>Event Brief</h4>
-                      <p>{active.details}</p>
-                    </div>
-                  )}
-                </div>
+                <EventDetailsEditor key={active.reference} reference={active.reference} audience="customer" status={active.status} realtime={realtime} onExpired={expire} onSaved={() => setRefresh(value => value + 1)} />
+                {active.details && (
+                  <div className="portal-brief-box">
+                    <h4>Event Brief</h4>
+                    <p>{active.details}</p>
+                  </div>
+                )}
               </div>
+            </div>
           </div>
         </> : <div className="portal-select-chat"><MessageCircle size={42} strokeWidth={1.2} /><h2>A little planning.<br />A great night.</h2><p>Select an inquiry to chat with the team and keep your event details together.</p></div>}</div>
       </div>

@@ -31,10 +31,10 @@
 .portal-workspace-heading p { font-size: 14px; color: #9eaa96; margin: 8px 0 0; }
 .portal-account { font-size: 13px; color: #b4beac; overflow-wrap: anywhere; }
 .portal-chat-layout { display: grid; grid-template-columns: minmax(240px, 300px) minmax(0, 1fr); flex: 1; min-height: 0; background: #191f16; border-radius: 12px; overflow: hidden; }
-.portal-sidebar { min-height: 0; display: flex; flex-direction: column; background: #1d251a; }
+.portal-sidebar { min-height: 100%; height: 100%; display: flex; flex-direction: column; background: #1d251a; border-right: 1px solid #283321; }
 .portal-sidebar-heading { padding: 18px 20px; display: flex; align-items: center; justify-content: space-between; }
 .portal-sidebar-heading h2 { font-size: 17px; font-weight: 500; margin: 0; }
-.portal-thread-list { flex: 1; overflow-y: auto; padding: 0 10px; }
+.portal-thread-list { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 0 10px; }
 .portal-thread { display: flex; flex-direction: column; gap: 8px; width: 100%; padding: 18px 16px; margin-bottom: 6px; text-align: left; border: 0; border-radius: 8px; background: transparent; color: #b8c3af; transition: background .2s; }
 .portal-thread:hover { background: #283322; }
 .portal-thread.is-selected { background: #35432b; color: #e4ebdc; }
@@ -43,7 +43,7 @@
 .portal-thread-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .portal-status { font-size: 12px; color: #cedba7; white-space: nowrap; }
 .portal-thread-date { display: flex; align-items: center; gap: 6px; margin-top: 3px; color: #a5b19c; }
-.portal-sidebar-footnote { display: flex; align-items: center; gap: 8px; margin: 0; padding: 20px; font-size: 12px; color: #a5b19c; }
+.portal-sidebar-footnote { display: flex; align-items: center; gap: 8px; margin: auto 0 0 0; padding: 20px; font-size: 12px; color: #a5b19c; flex-shrink: 0; }
 .portal-pages { display: flex; justify-content: space-between; align-items: center; padding: 8px 16px; font-size: 12px; }
 .portal-no-inquiries { padding: 28px 16px; font-size: 14px; color: #b8c3af; }
 .portal-no-inquiries a { color: var(--accent); }

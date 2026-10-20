@@ -6,6 +6,7 @@ export async function prepareDatabase(db) {
     ...['customerTokens', 'customerSessions', 'customerLinkLimits'].map(name => db.collection(name).createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 })),
     db.collection('messages').createIndex({ reference: 1, createdAt: -1, _id: -1 }),
     db.collection('messages').createIndex({ outboxPending: 1 }),
+    db.collection('inquiries').createIndex({ 'history.eventOutbox': 1 }),
     db.collection('inquiries').createIndex({ reference: 1 }, { unique: true }),
     db.collection('inquiries').createIndex({ idempotencyKey: 1 }, { unique: true }),
     db.collection('inquiries').createIndex({ createdAt: -1, _id: -1 }),

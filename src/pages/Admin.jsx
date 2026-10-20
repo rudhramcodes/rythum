@@ -7,6 +7,7 @@ import Dropdown from '../components/booking/Dropdown';
 import CopyPill from '../components/CopyPill';
 import Conversation from './Conversation';
 import InquiryNextStep from './InquiryNextStep';
+import EventDetailsEditor from './EventDetailsEditor';
 import { localDate } from '../components/booking/date';
 import InquiryAttachments from './InquiryAttachments';
 import useRealtime from './useRealtime';
@@ -562,6 +563,7 @@ function InquiryInbox({ onExpired, onUnreadChange, selected, navigate }) {
           <p>{inquiry.details}</p>
         </div>
 
+            <EventDetailsEditor reference={inquiry.reference} audience="admin" status={inquiry.status} realtime={realtime} onExpired={onExpired} onSaved={async () => { const data = await adminRequest(`admin/inquiries/${inquiry.reference}`); setInquiry(data.inquiry); setRefresh(value => value + 1); }} />
             </div></details>
         <InquiryManagement key={inquiry.reference} inquiry={inquiry} onExpired={onExpired} onSaved={updated => { setInquiry(updated); setRefresh(value => value + 1); }} />
           </div>

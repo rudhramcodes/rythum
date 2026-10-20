@@ -185,3 +185,76 @@ test('Socket.IO delivers saved changes only to the owner and admin, rejects spoo
     await new Promise(resolve => realtime.io.close(resolve));
   }
 });
+
+async function eventAdmin() {
+  const agent = request.agent(app);
+  assert.equal((await agent.post('/api/auth/sign-in/email').set('Origin', origin).send({ email: config.ADMIN_EMAIL, password })).status, 200);
+  return agent;
+}
+const proposedEvent = { eventType: 'Concert / Festival', city: 'Surat', date: '2099-11-10', details: 'Revised performance brief' };
+const eventPost = (agent, audience, body) => agent.post(`/api/${audience}/inquiries/${reference}/event`).set('Origin', origin).send(body);
+
+test('client requests keep current details until approval; retries, public history and outbox are safe', async () => {
+  const client = await login();
+  const admin = await eventAdmin();
+  const path = `inquiries/${reference}/event`;
+  const body = { key: randomUUID(), revision: 0, action: 'request', reason: 'Venue changed', event: proposedEvent };
+  assert.equal((await post(client, path, body)).status, 200);
+  assert.equal((await post(client, path, body)).status, 200);
+  assert.equal((await db.collection('inquiries').findOne({ reference })).city, 'Mumbai');
+  const pending = (await client.get(`/api/customer/${path}`)).body;
+  assert.equal(pending.pending.id, body.key);
+  assert.equal(pending.items.length, 1);
+  assert.ok(!JSON.stringify(pending).includes('SECRET'));
+  assert.equal((await post(client, path, { ...body, key: randomUUID(), revision: pending.revision })).status, 409);
+  assert.equal((await post(client, path, { ...body, action: 'approve' })).status, 403);
+  const approve = { key: randomUUID(), revision: pending.revision, action: 'approve', requestId: body.key, reason: 'New venue and date agreed' };
+  assert.equal((await eventPost(admin, 'admin', approve)).status, 200);
+  assert.equal((await eventPost(admin, 'admin', approve)).status, 200);
+  const saved = await db.collection('inquiries').findOne({ reference });
+  assert.equal(saved.city, 'Surat');
+  assert.equal(saved.date, proposedEvent.date);
+  assert.equal(saved.pendingEventChange, null);
+  assert.equal(saved.history.filter(entry => entry.eventChange).length, 2);
+  await queueNotifications(db); await queueNotifications(db);
+  assert.equal(await db.collection('notificationJobs').countDocuments({ kind: 'team-event' }), 1);
+  assert.equal(await db.collection('notificationJobs').countDocuments({ kind: 'customer-event' }), 1);
+  assert.equal((await db.collection('inquiries').findOne({ reference })).history.some(entry => entry.eventOutbox), false);
+  const sent = [];
+  while (await deliverNextJob(db, { sendMail: async mail => { sent.push(mail); return { accepted: [mail.to] }; } }, config)) { /* isolated transport */ }
+  assert.equal(sent.length, 2);
+  assert.ok(sent.every(mail => !mail.text.includes('SECRET') && mail.subject === 'Event details update'));
+});
+
+test('event requests enforce ownership, validation, closed state and stale event versions', async () => {
+  const client = await login(); const stranger = await login(other); const admin = await eventAdmin();
+  const path = `/api/customer/inquiries/${reference}/event`;
+  assert.equal((await request(app).get(path)).status, 401);
+  assert.equal((await stranger.get(path)).status, 404);
+  const edit = { key: randomUUID(), revision: 0, action: 'edit', reason: 'Correcting venue', event: proposedEvent };
+  assert.equal((await eventPost(stranger, 'customer', { ...edit, action: 'request' })).status, 404);
+  assert.equal((await admin.post(`/api/admin/inquiries/${reference}/event`).send(edit)).status, 403);
+  for (const event of [{ ...proposedEvent, date: '2020-01-01' }, { ...proposedEvent, date: '2099-02-30' }, { ...proposedEvent, city: '' }, { ...proposedEvent, email: 'other@example.com' }]) {
+    assert.equal((await eventPost(admin, 'admin', { ...edit, event })).status, 422);
+  }
+  assert.equal((await eventPost(admin, 'admin', edit)).status, 200);
+  assert.equal((await eventPost(admin, 'admin', { ...edit, key: randomUUID(), event: { ...proposedEvent, city: 'Delhi' } })).status, 409);
+  assert.equal((await eventPost(admin, 'admin', { ...edit, reason: 'Changed retry' })).status, 409);
+  await db.collection('inquiries').updateOne({ reference }, { $set: { status: 'Closed' } });
+  assert.equal((await eventPost(client, 'customer', { ...edit, action: 'request', key: randomUUID(), revision: 1 })).status, 409);
+});
+
+test('declining keeps event unchanged and simultaneous decisions resolve once', async () => {
+  const client = await login(); const admin = await eventAdmin();
+  const requestBody = { key: randomUUID(), revision: 0, action: 'request', reason: 'Please move venue', event: proposedEvent };
+  await eventPost(client, 'customer', requestBody);
+  const decision = { revision: 1, action: 'reject', requestId: requestBody.key, reason: 'Venue unavailable' };
+  const results = await Promise.all([1, 2].map(() => eventPost(admin, 'admin', { ...decision, key: randomUUID() })));
+  assert.deepEqual(results.map(result => result.status).sort(), [200, 409]);
+  const saved = await db.collection('inquiries').findOne({ reference });
+  assert.equal(saved.city, 'Mumbai');
+  assert.equal(saved.pendingEventChange, null);
+  const history = (await client.get(`/api/customer/inquiries/${reference}/event`)).body;
+  assert.equal(history.items[0].action, 'reject');
+  assert.equal(history.items[0].reason, decision.reason);
+});
