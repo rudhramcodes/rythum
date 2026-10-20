@@ -9,7 +9,7 @@
   "scripts": {
     "dev": "node --env-file-if-exists=.env --watch src/server.js",
     "start": "node --env-file-if-exists=.env src/server.js",
-    "worker": "node --env-file-if-exists=.env src/worker.js",
+    "worker": "node --env-file-if-exists=.env --watch src/worker.js",
     "admin:create": "node --env-file-if-exists=.env src/createAdmin.js",
     "test": "node --test test/*.test.js"
   },

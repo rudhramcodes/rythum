@@ -160,7 +160,7 @@ export function renderTeamEmail(inquiry, adminUrl = `${BRAND.domain}/admin`) {
   const date = escapeHtml(formatDate(inquiry.date));
   const details = escapeHtml(inquiry.details || 'No additional notes provided.').replace(/\n/g, '<br>');
 
-  const subject = `⚡ New Booking Inquiry · ${inquiry.name || 'Client'} (${inquiry.eventType}) · ${reference}`;
+  const subject = `New Booking Inquiry · ${inquiry.name || 'Client'} (${inquiry.eventType}) · ${reference}`;
 
   const text = `NEW WEBSITE INQUIRY RECEIVED\n\nReference: ${reference}\nClient: ${inquiry.name} (${inquiry.email})\nPhone: ${inquiry.phone || 'None'}\nEvent: ${inquiry.eventType}\nCity: ${inquiry.city}\nDate: ${formatDate(inquiry.date)}\n\nEvent Brief:\n${inquiry.details || 'None'}\n\nRead and reply through the admin inbox on the website.`;
 
@@ -274,6 +274,339 @@ export function renderTeamEmail(inquiry, adminUrl = `${BRAND.domain}/admin`) {
             </td>
           </tr>
 
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+
+  return { subject, text, html };
+}
+
+export function renderChatDigestEmail({ inquiry, recipientRole, unreadCount, snippets = [], url }) {
+  const isTeam = recipientRole === 'team';
+  const name = escapeHtml(inquiry.name || 'there');
+  const reference = escapeHtml(inquiry.reference || '');
+  const eventType = escapeHtml(inquiry.eventType || 'Event');
+  const senderName = isTeam ? name : 'Rythum’s management team';
+
+  const countText = unreadCount === 1 ? '1 new message' : `${unreadCount} new messages`;
+  const subject = isTeam
+    ? `New message from ${name} · ${eventType} (${reference})`
+    : `New message from Rythum’s team · ${eventType} (${reference})`;
+
+  const snippetLines = snippets.length > 0 ? snippets.map(s => `“${s}”`).join('\n') : '';
+  const text = `${BRAND.name}\n\n${senderName} sent you ${countText} regarding inquiry ${reference} (${eventType}).\n\n${snippetLines}\n\nRead and reply on the website:\n${url}\n\nPlease do not reply directly to this automated email.`;
+
+  const htmlSnippets = snippets.map(s => `
+    <div style="background-color: ${BRAND.palette.cardInner}; border-left: 3px solid ${BRAND.palette.accent}; padding: 12px 16px; margin-bottom: 10px; border-radius: 0 6px 6px 0;">
+      <p style="margin: 0; font-size: 14px; line-height: 1.55; color: ${BRAND.palette.ink}; white-space: pre-wrap;">“${escapeHtml(s)}”</p>
+    </div>
+  `).join('');
+
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${subject}</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: ${BRAND.palette.ground}; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: ${BRAND.palette.ink}; -webkit-font-smoothing: antialiased;">
+  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: ${BRAND.palette.ground}; padding: 40px 16px;">
+    <tr>
+      <td align="center">
+        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width: 580px; background-color: ${BRAND.palette.card}; border: 1px solid ${BRAND.palette.border}; border-radius: 12px; overflow: hidden;">
+          <tr>
+            <td style="padding: 28px 36px 20px; border-bottom: 1px solid ${BRAND.palette.border};">
+              <span style="font-size: 18px; font-weight: 700; letter-spacing: -0.03em; color: ${BRAND.palette.ink}; font-family: 'Clash Display', Arial, sans-serif;">
+                ${BRAND.name}<span style="color: ${BRAND.palette.accent};">.</span>
+              </span>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 32px 36px 28px;">
+              <p style="margin: 0 0 10px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; color: ${BRAND.palette.accent};">
+                ${countText.toUpperCase()}
+              </p>
+              <h1 style="margin: 0 0 14px; font-size: 26px; line-height: 1.2; font-weight: 600; color: ${BRAND.palette.ink}; font-family: 'Clash Display', Arial, sans-serif;">
+                ${isTeam ? `New message from ${name}` : 'You have a new message'}
+              </h1>
+              <p style="margin: 0 0 24px; font-size: 15px; line-height: 1.6; color: ${BRAND.palette.muted};">
+                ${isTeam ? `${name} sent a message regarding inquiry <strong>${reference}</strong> (${eventType}).` : `Our management team sent a reply regarding your inquiry <strong>${reference}</strong> (${eventType}).`}
+              </p>
+
+              ${htmlSnippets}
+
+              <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top: 24px;">
+                <tr>
+                  <td align="left">
+                    <a href="${escapeHtml(url)}" target="_blank" style="display: inline-block; background-color: ${BRAND.palette.accent}; color: ${BRAND.palette.accentText}; text-decoration: none; font-size: 14px; font-weight: 600; padding: 14px 24px; border-radius: 4px;">
+                      ${isTeam ? 'Open admin conversation ↗' : 'Reply in inquiry portal ↗'}
+                    </a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 20px 36px; background-color: ${BRAND.palette.ground}; border-top: 1px solid ${BRAND.palette.border}; text-align: left;">
+              <p style="margin: 0; font-size: 11px; color: ${BRAND.palette.subtle};">
+                Replies through this automated email address are not monitored. Please use the secure website portal to chat.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+
+  return { subject, text, html };
+}
+
+export function renderStatusChangeEmail({ inquiry, status, closureReason = '', url }) {
+  const name = escapeHtml(inquiry.name || 'there');
+  const reference = escapeHtml(inquiry.reference || '');
+  const eventType = escapeHtml(inquiry.eventType || 'Event');
+  const city = escapeHtml(inquiry.city || 'To be decided');
+  const date = escapeHtml(formatDate(inquiry.date));
+
+  let subject = `Inquiry status updated: ${status} · ${reference}`;
+  let headline = `Your inquiry is now: ${status}`;
+  let description = `The status of your event inquiry has been updated to <strong>${status}</strong>.`;
+
+  if (status === 'Confirmed') {
+    subject = `Booking Confirmed · ${eventType} · ${reference}`;
+    headline = 'Your booking is officially confirmed!';
+    description = 'Congratulations! We are delighted to confirm your event with Rythum Shastri. Your date and arrangements have been locked into our tour schedule.';
+  } else if (status === 'Quoted') {
+    subject = `Quote ready for your event · ${eventType} · ${reference}`;
+    headline = 'A proposal & quote has been prepared';
+    description = 'Our management team has prepared a custom quote for your event. Please log in to your portal to review the details and continue the conversation.';
+  } else if (status === 'Closed') {
+    subject = `Inquiry closed · ${eventType} · ${reference}`;
+    headline = 'Inquiry status: Closed';
+    description = `Your event inquiry has been closed.${closureReason ? ` Note: ${escapeHtml(closureReason)}` : ''}`;
+  }
+
+  const text = `${BRAND.name}\n\nHi ${inquiry.name || 'there'},\n\n${headline}\n\nReference: ${reference}\nEvent: ${inquiry.eventType}\nLocation: ${inquiry.city}\nDate: ${formatDate(inquiry.date)}\nStatus: ${status}\n\n${description.replace(/<[^>]+>/g, '')}\n\nView details: ${url}\n\nRythum Shastri Management`;
+
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${subject}</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: ${BRAND.palette.ground}; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: ${BRAND.palette.ink}; -webkit-font-smoothing: antialiased;">
+  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: ${BRAND.palette.ground}; padding: 40px 16px;">
+    <tr>
+      <td align="center">
+        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width: 580px; background-color: ${BRAND.palette.card}; border: 1px solid ${BRAND.palette.border}; border-radius: 12px; overflow: hidden;">
+          <tr>
+            <td style="padding: 28px 36px 20px; border-bottom: 1px solid ${BRAND.palette.border};">
+              <span style="font-size: 18px; font-weight: 700; letter-spacing: -0.03em; color: ${BRAND.palette.ink}; font-family: 'Clash Display', Arial, sans-serif;">
+                ${BRAND.name}<span style="color: ${BRAND.palette.accent};">.</span>
+              </span>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 32px 36px 28px;">
+              <span style="display: inline-block; padding: 4px 10px; background-color: #2b331f; color: ${BRAND.palette.accent}; border: 1px solid #4a5933; border-radius: 4px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 14px;">
+                STATUS: ${status.toUpperCase()}
+              </span>
+              <h1 style="margin: 0 0 14px; font-size: 26px; line-height: 1.2; font-weight: 600; color: ${BRAND.palette.ink}; font-family: 'Clash Display', Arial, sans-serif;">
+                ${headline}
+              </h1>
+              <p style="margin: 0 0 24px; font-size: 15px; line-height: 1.6; color: ${BRAND.palette.muted};">
+                Hi ${name}, ${description}
+              </p>
+
+              <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom: 24px; border: 1px solid ${BRAND.palette.border}; border-radius: 8px; overflow: hidden;">
+                <tr style="background-color: ${BRAND.palette.cardInner};">
+                  <td style="padding: 12px 18px; font-size: 12px; color: ${BRAND.palette.muted}; width: 35%; border-bottom: 1px solid ${BRAND.palette.border};">Reference</td>
+                  <td style="padding: 12px 18px; font-size: 14px; font-weight: 700; font-family: monospace; color: ${BRAND.palette.accent}; border-bottom: 1px solid ${BRAND.palette.border};">${reference}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 12px 18px; font-size: 12px; color: ${BRAND.palette.muted}; border-bottom: 1px solid ${BRAND.palette.border};">Event Type</td>
+                  <td style="padding: 12px 18px; font-size: 14px; font-weight: 600; color: ${BRAND.palette.ink}; border-bottom: 1px solid ${BRAND.palette.border};">${eventType}</td>
+                </tr>
+                <tr style="background-color: ${BRAND.palette.cardInner};">
+                  <td style="padding: 12px 18px; font-size: 12px; color: ${BRAND.palette.muted}; border-bottom: 1px solid ${BRAND.palette.border};">Location</td>
+                  <td style="padding: 12px 18px; font-size: 14px; color: ${BRAND.palette.ink}; border-bottom: 1px solid ${BRAND.palette.border};">${city}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 12px 18px; font-size: 12px; color: ${BRAND.palette.muted};">Event Date</td>
+                  <td style="padding: 12px 18px; font-size: 14px; font-weight: 600; color: ${BRAND.palette.ink};">${date}</td>
+                </tr>
+              </table>
+
+              <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td align="left">
+                    <a href="${escapeHtml(url)}" target="_blank" style="display: inline-block; background-color: ${BRAND.palette.accent}; color: ${BRAND.palette.accentText}; text-decoration: none; font-size: 14px; font-weight: 600; padding: 14px 24px; border-radius: 4px;">
+                      View your inquiry ↗
+                    </a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 20px 36px; background-color: ${BRAND.palette.ground}; border-top: 1px solid ${BRAND.palette.border}; text-align: left;">
+              <p style="margin: 0; font-size: 11px; color: ${BRAND.palette.subtle};">
+                Rythum Shastri · Gujarati Folk, Raas-Garba & Contemporary Sufi
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+
+  return { subject, text, html };
+}
+
+export function renderEventChangeEmail({ inquiry, eventChange, recipientRole, url }) {
+  const isTeam = recipientRole === 'team';
+  const name = escapeHtml(inquiry.name || 'Client');
+  const reference = escapeHtml(inquiry.reference || '');
+  const action = eventChange?.action || 'update';
+  const reason = escapeHtml(eventChange?.reason || 'Details update');
+
+  let subject = `Event details updated · ${reference}`;
+  let title = 'Event details update';
+  let description = 'The proposed event specifications have been updated.';
+
+  if (action === 'request') {
+    subject = `Change requested by ${name} · ${reference}`;
+    title = `Client requested changes for event`;
+    description = `${name} has submitted a request to modify event details with note: “${reason}”. Please review and accept or decline.`;
+  } else if (action === 'approve') {
+    subject = `Event details approved · ${reference}`;
+    title = `Your event change request was approved`;
+    description = `The management team has approved your requested event details update.`;
+  } else if (action === 'reject') {
+    subject = `Event details request update · ${reference}`;
+    title = `Event change request reviewed`;
+    description = `The management team reviewed your change request with note: “${reason}”.`;
+  } else if (action === 'edit') {
+    subject = `Event details updated · ${reference}`;
+    title = `Event details updated by team`;
+    description = `The management team updated event specifications with note: “${reason}”.`;
+  }
+
+  const text = `${BRAND.name}\n\n${title}\n\nInquiry Reference: ${reference}\nReason/Note: ${eventChange?.reason || 'None'}\n\nReview changes on the website:\n${url}`;
+
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${subject}</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: ${BRAND.palette.ground}; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: ${BRAND.palette.ink}; -webkit-font-smoothing: antialiased;">
+  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: ${BRAND.palette.ground}; padding: 40px 16px;">
+    <tr>
+      <td align="center">
+        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width: 580px; background-color: ${BRAND.palette.card}; border: 1px solid ${BRAND.palette.border}; border-radius: 12px; overflow: hidden;">
+          <tr>
+            <td style="padding: 28px 36px 20px; border-bottom: 1px solid ${BRAND.palette.border};">
+              <span style="font-size: 18px; font-weight: 700; letter-spacing: -0.03em; color: ${BRAND.palette.ink}; font-family: 'Clash Display', Arial, sans-serif;">
+                ${BRAND.name}<span style="color: ${BRAND.palette.accent};">.</span>
+              </span>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 32px 36px 28px;">
+              <h1 style="margin: 0 0 14px; font-size: 24px; line-height: 1.25; font-weight: 600; color: ${BRAND.palette.ink}; font-family: 'Clash Display', Arial, sans-serif;">
+                ${title}
+              </h1>
+              <p style="margin: 0 0 20px; font-size: 15px; line-height: 1.6; color: ${BRAND.palette.muted};">
+                ${description}
+              </p>
+
+              <div style="background-color: ${BRAND.palette.cardInner}; border: 1px solid ${BRAND.palette.border}; border-radius: 6px; padding: 14px 18px; margin-bottom: 24px;">
+                <span style="display: block; font-size: 11px; text-transform: uppercase; color: ${BRAND.palette.muted}; letter-spacing: 0.08em; margin-bottom: 4px;">Reason / Details</span>
+                <span style="font-size: 14px; color: ${BRAND.palette.ink};">“${reason}”</span>
+              </div>
+
+              <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td align="left">
+                    <a href="${escapeHtml(url)}" target="_blank" style="display: inline-block; background-color: ${BRAND.palette.accent}; color: ${BRAND.palette.accentText}; text-decoration: none; font-size: 14px; font-weight: 600; padding: 14px 24px; border-radius: 4px;">
+                      ${isTeam ? 'Review in admin inbox ↗' : 'View in inquiry portal ↗'}
+                    </a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+
+  return { subject, text, html };
+}
+
+export function renderDocumentUploadEmail({ inquiry, label, originalName, url }) {
+  const name = escapeHtml(inquiry.name || 'there');
+  const reference = escapeHtml(inquiry.reference || '');
+  const cleanLabel = escapeHtml(label || 'Document');
+  const cleanName = escapeHtml(originalName || 'file');
+
+  const subject = `New document available: ${cleanLabel} · ${reference}`;
+  const text = `${BRAND.name}\n\nHi ${inquiry.name || 'there'},\n\nA new document (${cleanLabel}: ${cleanName}) has been uploaded to your event inquiry ${reference}.\n\nView and download from your portal:\n${url}`;
+
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${subject}</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: ${BRAND.palette.ground}; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: ${BRAND.palette.ink}; -webkit-font-smoothing: antialiased;">
+  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: ${BRAND.palette.ground}; padding: 40px 16px;">
+    <tr>
+      <td align="center">
+        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width: 580px; background-color: ${BRAND.palette.card}; border: 1px solid ${BRAND.palette.border}; border-radius: 12px; overflow: hidden;">
+          <tr>
+            <td style="padding: 28px 36px 20px; border-bottom: 1px solid ${BRAND.palette.border};">
+              <span style="font-size: 18px; font-weight: 700; letter-spacing: -0.03em; color: ${BRAND.palette.ink}; font-family: 'Clash Display', Arial, sans-serif;">
+                ${BRAND.name}<span style="color: ${BRAND.palette.accent};">.</span>
+              </span>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 32px 36px 28px;">
+              <span style="display: inline-block; padding: 4px 10px; background-color: #2b331f; color: ${BRAND.palette.accent}; border: 1px solid #4a5933; border-radius: 4px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 14px;">
+                NEW DOCUMENT
+              </span>
+              <h1 style="margin: 0 0 14px; font-size: 24px; line-height: 1.25; font-weight: 600; color: ${BRAND.palette.ink}; font-family: 'Clash Display', Arial, sans-serif;">
+                ${cleanLabel} uploaded to your workspace
+              </h1>
+              <p style="margin: 0 0 20px; font-size: 15px; line-height: 1.6; color: ${BRAND.palette.muted};">
+                Hi ${name}, our management team has uploaded a new document (<strong>${cleanName}</strong>) to your inquiry workspace for reference: <strong>${reference}</strong>.
+              </p>
+
+              <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td align="left">
+                    <a href="${escapeHtml(url)}" target="_blank" style="display: inline-block; background-color: ${BRAND.palette.accent}; color: ${BRAND.palette.accentText}; text-decoration: none; font-size: 14px; font-weight: 600; padding: 14px 24px; border-radius: 4px;">
+                      View & download document ↗
+                    </a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
         </table>
       </td>
     </tr>

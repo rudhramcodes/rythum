@@ -84,7 +84,22 @@ export function customerRouter({ db, config, notify = () => {} }) {
     next();
   });
   router.use('/inquiries/:reference/event', eventRouter({ db, config, audience: 'customer', notify }));
-  router.get('/inquiries/:reference/messages', async (req, res) => res.json(await conversation(db, req.inquiry.reference, req.query)));
+  router.get('/inquiries/:reference/messages', async (req, res) => {
+    await db.collection('messages').updateMany({ reference: req.inquiry.reference, role: 'team' }, { $set: { readByCustomer: true } });
+    await db.collection('notificationJobs').updateMany(
+      { reference: req.inquiry.reference, kind: 'customer-message', status: 'pending' },
+      { $set: { status: 'skipped', skipReason: 'READ_BEFORE_DELIVERY', updatedAt: new Date() } }
+    );
+    res.json(await conversation(db, req.inquiry.reference, req.query));
+  });
+  router.post('/inquiries/:reference/read', async (req, res) => {
+    await db.collection('messages').updateMany({ reference: req.inquiry.reference, role: 'team' }, { $set: { readByCustomer: true } });
+    await db.collection('notificationJobs').updateMany(
+      { reference: req.inquiry.reference, kind: 'customer-message', status: 'pending' },
+      { $set: { status: 'skipped', skipReason: 'READ_BEFORE_DELIVERY', updatedAt: new Date() } }
+    );
+    res.json({ ok: true });
+  });
   router.post('/inquiries/:reference/messages', rateLimit({ windowMs: 60000, limit: 10, keyGenerator: req => req.customer._id, standardHeaders: 'draft-8', legacyHeaders: false }), async (req, res) => {
     const result = await sendMessage(db, config, req.inquiry, 'customer', req.customer.email, req.body);
     notify({ reference: req.inquiry.reference, email: req.customer.email, kind: 'message' });

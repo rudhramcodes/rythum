@@ -136,8 +136,33 @@ export function adminRouter({ db, auth, config, notify = () => {} }) {
       $inc: { revision: 1 },
       $push: { history: { id: randomUUID(), at: now, actor: req.admin.email, changes, note } },
     }, { returnDocument: 'after', projection: fields });
-    if (!inquiry) throw new ApiError(409, 'EDIT_CONFLICT', 'Another session updated this inquiry. Reload the latest details before saving.');
-    if (Object.keys(changes).some(key => key === 'status')) notify({ reference: current.reference, email: current.email, kind: 'status' });
+    if (Object.keys(changes).some(key => key === 'status')) {
+      const newStatus = changes.status?.to;
+      const previousStatus = changes.status?.from;
+      notify({ reference: current.reference, email: current.email, kind: 'status' });
+      if (['Confirmed', 'Quoted', 'Closed', 'In discussion'].includes(newStatus)) {
+        const dedupeKey = `status:${current.reference}:${newStatus}:${inquiry.revision || 1}`;
+        try {
+          await db.collection('notificationJobs').insertOne({
+            dedupeKey,
+            to: current.email,
+            kind: 'customer-status',
+            reference: current.reference,
+            statusData: {
+              status: newStatus,
+              previousStatus,
+              closureReason: closureReason || '',
+            },
+            status: 'pending',
+            attempts: 0,
+            nextAttemptAt: now,
+            createdAt: now,
+          });
+        } catch (err) {
+          if (err.code !== 11000) console.error('Status notification job queue failed:', err);
+        }
+      }
+    }
     res.json({ inquiry });
   });
   router.use('/inquiries/:reference/event', eventRouter({ db, config, audience: 'admin', notify }));
@@ -145,16 +170,22 @@ export function adminRouter({ db, auth, config, notify = () => {} }) {
     const inquiries = db.collection('inquiries');
     const inquiry = await inquiries.findOne({ reference: req.params.reference });
     if (!inquiry) throw new ApiError(404, 'NOT_FOUND', 'Inquiry not found.');
-    if ((inquiry.unreadCount || 0) > 0) {
-      await inquiries.updateOne({ reference: req.params.reference }, { $set: { unreadCount: 0 } });
-      await db.collection('messages').updateMany({ reference: req.params.reference, role: 'customer' }, { $set: { readByAdmin: true } });
-    }
+    await inquiries.updateOne({ reference: req.params.reference }, { $set: { unreadCount: 0 } });
+    await db.collection('messages').updateMany({ reference: req.params.reference, role: 'customer' }, { $set: { readByAdmin: true } });
+    await db.collection('notificationJobs').updateMany(
+      { reference: req.params.reference, kind: 'team-message', status: 'pending' },
+      { $set: { status: 'skipped', skipReason: 'READ_BEFORE_DELIVERY', updatedAt: new Date() } }
+    );
     res.json(await conversation(db, inquiry.reference, req.query));
   });
   router.post('/inquiries/:reference/read', async (req, res) => {
     if (!/^RS-[A-F0-9-]{36}$/.test(req.params.reference)) throw new ApiError(404, 'NOT_FOUND', 'Inquiry not found.');
     await db.collection('inquiries').updateOne({ reference: req.params.reference }, { $set: { unreadCount: 0 } });
     await db.collection('messages').updateMany({ reference: req.params.reference, role: 'customer' }, { $set: { readByAdmin: true } });
+    await db.collection('notificationJobs').updateMany(
+      { reference: req.params.reference, kind: 'team-message', status: 'pending' },
+      { $set: { status: 'skipped', skipReason: 'READ_BEFORE_DELIVERY', updatedAt: new Date() } }
+    );
     res.json({ ok: true });
   });
   router.post('/inquiries/:reference/messages', rateLimit({ windowMs: 60000, limit: 20, keyGenerator: req => req.admin.id, standardHeaders: 'draft-8', legacyHeaders: false }), (req, res, next) => {
@@ -188,6 +219,29 @@ export function adminRouter({ db, auth, config, notify = () => {} }) {
       label: req.body.label || 'Document',
     });
     notify({ reference: inquiry.reference, email: inquiry.email, kind: 'attachment' });
+    const importantDocumentLabels = ['Contract', 'Tech Rider', 'Stage Plot', 'Event Brief', 'Schedule'];
+    if (importantDocumentLabels.includes(saved.label)) {
+      const dedupeKey = `document:${inquiry.reference}:${saved._id}`;
+      const now = new Date();
+      try {
+        await db.collection('notificationJobs').insertOne({
+          dedupeKey,
+          to: inquiry.email,
+          kind: 'customer-document',
+          reference: inquiry.reference,
+          documentData: {
+            label: saved.label,
+            originalName: saved.originalName,
+          },
+          status: 'pending',
+          attempts: 0,
+          nextAttemptAt: now,
+          createdAt: now,
+        });
+      } catch (err) {
+        if (err.code !== 11000) console.error('Document notification job queue failed:', err);
+      }
+    }
     res.json({ attachment: saved });
   });
   router.get('/inquiries/:reference/attachments/:id/download', async (req, res) => {
