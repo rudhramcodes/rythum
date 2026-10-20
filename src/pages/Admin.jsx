@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ArrowLeft, ArrowRight, Search, LogOut, RefreshCw, Eye, EyeOff, Inbox, Copy, Check, Shield } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Search, LogOut, RefreshCw, Eye, EyeOff, Inbox, Copy, Check, Shield, ChevronDown, MessageCircle, Paperclip, CalendarDays, MapPin } from 'lucide-react';
 import gsap from 'gsap';
 import { adminRequest } from './adminApi';
 import SmoothField from '../components/booking/SmoothField';
@@ -421,15 +421,19 @@ function Security({ user, onExpired }) {
   );
 }
 
-function InquiryInbox({ onExpired, onUnreadChange }) {
+function InquiryInbox({ onExpired, onUnreadChange, selected, navigate }) {
   const realtime = useRealtime('admin', onExpired);
   const [drafts, setDrafts] = useState({});
-  const [filter, setFilter] = useState({ q: '', status: 'All', page: 1 });
+  const [detailTab, setDetailTab] = useState('chat');
+  const [filter, setFilter] = useState(() => {
+    const query = new URLSearchParams(window.location.search);
+    const page = Number(query.get('page') || 1);
+    return { q: (query.get('q') || '').slice(0, 120), status: statuses.includes(query.get('status')) ? query.get('status') : 'All', page: Number.isInteger(page) && page >= 1 && page <= 1000 ? page : 1 };
+  });
   const [result, setResult] = useState({ items: [], total: 0, totalUnread: 0, pages: 1 });
   const [busy, setBusy] = useState(true);
   const [error, setError] = useState('');
   const [refresh, setRefresh] = useState(0);
-  const [selected, setSelected] = useState('');
   const [inquiry, setInquiry] = useState(null);
   const [detailError, setDetailError] = useState('');
   const title = useRef(null);
@@ -438,6 +442,7 @@ function InquiryInbox({ onExpired, onUnreadChange }) {
     const controller = new AbortController();
     adminRequest(`admin/inquiries?${new URLSearchParams(filter)}`, { signal: controller.signal }).then(data => {
       setResult(data);
+      if (data.page !== filter.page) setFilter(current => ({ ...current, page: data.page }));
       if (typeof data.totalUnread === 'number') onUnreadChange?.(data.totalUnread);
     }).catch(error => {
       if (controller.signal.aborted) return;
@@ -459,7 +464,7 @@ function InquiryInbox({ onExpired, onUnreadChange }) {
     return () => controller.abort();
   }, [selected, onExpired]);
 
-  function updateFilter(next) { setBusy(true); setError(''); setFilter(next); }
+  function updateFilter(next) { setBusy(true); setError(''); setFilter(next); window.history.replaceState(null, '', `/admin?${new URLSearchParams(next)}`); }
 
   function handleRefresh() {
     setBusy(true);
@@ -468,7 +473,7 @@ function InquiryInbox({ onExpired, onUnreadChange }) {
   }
 
   if (selected) return <section className="admin-detail">
-    <button type="button" className="text-link admin-back-btn" onClick={() => { setSelected(''); setInquiry(null); setDetailError(''); }}>
+    <button type="button" className="text-link admin-back-btn" onClick={() => navigate(`/admin${window.location.search}`)}>
       <ArrowLeft size={16} /> Back to inbox
     </button>
     {detailError ? (
@@ -499,9 +504,33 @@ function InquiryInbox({ onExpired, onUnreadChange }) {
           <h2 ref={title} tabIndex={-1}>{inquiry.name}</h2>
           <span className="admin-status">{inquiry.status}</span>
         </div>
+        <div className="admin-event-context">
+          <span>{inquiry.eventType}</span>
+          <span><MapPin size={15} aria-hidden="true" />{inquiry.city}</span>
+          <span><CalendarDays size={15} aria-hidden="true" />{formatDate(inquiry.date)}</span>
+        </div>
         <div className="admin-reference-row">
           <CopyPill text={inquiry.reference} label="Reference ID" monospace />
         </div>
+        <div className="admin-detail-workspace">
+          <div className="admin-detail-main">
+            <div className="workspace-tabs" data-active={detailTab} role="tablist" aria-label="Inquiry workspace" onKeyDown={event => {
+              if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+              event.preventDefault();
+              const next = event.key === 'Home' ? 'chat' : event.key === 'End' ? 'files' : detailTab === 'chat' ? 'files' : 'chat';
+              setDetailTab(next); document.getElementById(`admin-tab-${next}`)?.focus();
+            }}>
+              {['chat', 'files'].map(tab => <button key={tab} id={`admin-tab-${tab}`} role="tab" type="button" aria-selected={detailTab === tab} aria-controls={`admin-panel-${tab}`} tabIndex={detailTab === tab ? 0 : -1} onClick={() => setDetailTab(tab)}>{tab === 'chat' ? <MessageCircle size={17} aria-hidden="true" /> : <Paperclip size={17} aria-hidden="true" />}{tab === 'chat' ? 'Chat' : 'Files'}</button>)}
+            </div>
+            <div id="admin-panel-chat" role="tabpanel" aria-labelledby="admin-tab-chat" hidden={detailTab !== 'chat'}>
+        <Conversation active={detailTab === 'chat'} key={`conversation-${inquiry.reference}`} reference={inquiry.reference} audience="admin" onExpired={onExpired} realtime={realtime} initialDraft={drafts[inquiry.reference] || ''} onDraftChange={value => setDrafts(current => ({ ...current, [inquiry.reference]: value }))} />
+            </div>
+            <div id="admin-panel-files" role="tabpanel" aria-labelledby="admin-tab-files" hidden={detailTab !== 'files'}>
+        <InquiryAttachments key={`attachments-${inquiry.reference}`} reference={inquiry.reference} audience="admin" onExpired={onExpired} realtime={realtime} />
+            </div>
+          </div>
+          <div className="admin-detail-support" aria-label="Event details and team actions">
+            <details className="admin-overview admin-detail-disclosure"><summary><span>Event details<small>Contact information and event brief</small></span><ChevronDown size={20} aria-hidden="true" /></summary><div className="admin-disclosure-content">
         <dl className="admin-detail-grid">
           {[
             ['Email', inquiry.email, true],
@@ -528,9 +557,11 @@ function InquiryInbox({ onExpired, onUnreadChange }) {
           </div>
           <p>{inquiry.details}</p>
         </div>
-        <InquiryAttachments key={`attachments-${inquiry.reference}`} reference={inquiry.reference} audience="admin" onExpired={onExpired} realtime={realtime} />
-        <Conversation key={`conversation-${inquiry.reference}`} reference={inquiry.reference} audience="admin" onExpired={onExpired} realtime={realtime} initialDraft={drafts[inquiry.reference] || ''} onDraftChange={value => setDrafts(current => ({ ...current, [inquiry.reference]: value }))} />
+
+            </div></details>
         <InquiryManagement key={inquiry.reference} inquiry={inquiry} onExpired={onExpired} onSaved={updated => { setInquiry(updated); setRefresh(value => value + 1); }} />
+          </div>
+        </div>
       </>
     )}
   </section>;
@@ -630,7 +661,7 @@ function InquiryInbox({ onExpired, onUnreadChange }) {
                 }
                 setInquiry(null);
                 setDetailError('');
-                setSelected(item.reference);
+                navigate(`/admin/inquiry-details/${encodeURIComponent(item.reference)}?${new URLSearchParams(filter)}`);
               }}
             >
               <div className="admin-inquiry-col-info">
@@ -751,7 +782,16 @@ export default function Admin() {
   const [user, setUser] = useState(null);
   const [configuration, setConfiguration] = useState(null);
   const [error, setError] = useState('');
-  const [screen, setScreen] = useState('inbox');
+  const [path, setPath] = useState(window.location.pathname);
+  const screen = path === '/admin/security' ? 'security' : 'inbox';
+  const selected = path.startsWith('/admin/inquiry-details/') ? path.slice('/admin/inquiry-details/'.length).replace(/\/$/, '') : '';
+  function navigate(next) { window.history.pushState(null, '', next); setPath(window.location.pathname); }
+  function setScreen(next) { navigate(next === 'security' ? '/admin/security' : '/admin'); }
+  useEffect(() => {
+    const sync = () => setPath(window.location.pathname);
+    window.addEventListener('popstate', sync);
+    return () => window.removeEventListener('popstate', sync);
+  }, []);
   const [unreadCount, setUnreadCount] = useState(0);
   async function loadSession() { const data = await adminRequest('admin/session'); setUser(data.user); }
   useEffect(() => {
@@ -799,7 +839,7 @@ export default function Admin() {
         ) : (
           <>
             <p className="admin-account">{user.email}</p>
-            <InquiryInbox onExpired={expire} onUnreadChange={setUnreadCount} />
+            <InquiryInbox key={selected} selected={selected} navigate={navigate} onExpired={expire} onUnreadChange={setUnreadCount} />
           </>
         )}
       </div>

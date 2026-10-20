@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   FileText, Image, Music, Paperclip, Download, Trash2,
-  UploadCloud, Check, AlertCircle, Filter, Loader2
+  UploadCloud, Check, AlertCircle, Filter, Loader2, X
 } from 'lucide-react';
 import { adminRequest, getAttachmentDownloadUrl } from './adminApi';
 import Dropdown from '../components/booking/Dropdown';
@@ -66,6 +66,18 @@ function uploadWithProgress(audience, reference, formData, onProgress) {
 
 export default function InquiryAttachments({ reference, audience = 'admin', onExpired, realtime }) {
   const [items, setItems] = useState([]);
+  const [preview, setPreview] = useState(null);
+  const previewDialog = useRef(null);
+  const fileList = useRef(null);
+  useEffect(() => {
+    if (!preview) return;
+    const dialog = previewDialog.current;
+    const previousFocus = document.activeElement;
+    const overflow = document.body.style.overflow;
+    dialog.showModal();
+    document.body.style.overflow = 'hidden';
+    return () => { dialog.close(); document.body.style.overflow = overflow; previousFocus?.focus(); };
+  }, [preview]);
   const [loading, setLoading] = useState(true);
   const [uploadTask, setUploadTask] = useState(null); // { file, label, percent, loaded, total, status: 'uploading' | 'processing' | 'done' }
   const [error, setError] = useState('');
@@ -74,6 +86,7 @@ export default function InquiryAttachments({ reference, audience = 'admin', onEx
   const [isDragging, setIsDragging] = useState(false);
   const [filterCategory, setFilterCategory] = useState('All');
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+  const [deleting, setDeleting] = useState(false);
   const [downloadingId, setDownloadingId] = useState(null);
   const fileInputRef = useRef(null);
   const dragCounter = useRef(0);
@@ -107,7 +120,7 @@ export default function InquiryAttachments({ reference, audience = 'admin', onEx
   }, [realtime?.sequence, realtime?.event, reference, loadAttachments]);
 
   async function handleFileUpload(file) {
-    if (!file) return;
+    if (!file || uploadTask) return;
 
     if (file.size > 20 * 1024 * 1024) {
       setError('File exceeds 20 MB size limit.');
@@ -147,7 +160,7 @@ export default function InquiryAttachments({ reference, audience = 'admin', onEx
       if (data.attachment) {
         setUploadTask(prev => prev ? { ...prev, percent: 100, status: 'done' } : null);
         setTimeout(() => {
-          setItems(prev => [data.attachment, ...prev]);
+          setItems(prev => [data.attachment, ...prev.filter(item => item._id !== data.attachment._id)]);
           setUploadTask(null);
           setNotice(`Uploaded “${file.name}”`);
           setTimeout(() => setNotice(''), 3500);
@@ -197,6 +210,8 @@ export default function InquiryAttachments({ reference, audience = 'admin', onEx
   }
 
   async function handleDelete(id) {
+    if (deleting) return;
+    setDeleting(true);
     setError('');
     try {
       await adminRequest(`${audience}/inquiries/${encodeURIComponent(reference)}/attachments/${encodeURIComponent(id)}`, {
@@ -209,7 +224,7 @@ export default function InquiryAttachments({ reference, audience = 'admin', onEx
     } catch (err) {
       if (err.status === 401) onExpired?.();
       else setError(err.message || 'Failed to delete attachment.');
-    }
+    } finally { setDeleting(false); }
   }
 
   async function handleDownload(item) {
@@ -252,7 +267,7 @@ export default function InquiryAttachments({ reference, audience = 'admin', onEx
     : items.filter(it => (it.label || 'Document') === filterCategory);
 
   const folderItems = useMemo(() => {
-    return items.slice(0, 6).map(att => {
+    return items.slice(0, 3).map(att => {
       const isImg = att.mimeType?.startsWith('image/') || ['jpg', 'jpeg', 'png', 'webp'].includes(att.originalName?.split('.').pop()?.toLowerCase());
       const cleanTitle = att.label || 'Event Document';
       if (isImg) {
@@ -405,21 +420,32 @@ export default function InquiryAttachments({ reference, audience = 'admin', onEx
           <div className="admin-folder-stage-container">
             <Folder
               label="Documents"
-              tabPosition="center"
+              tabPosition="left"
               mode="flap"
               variant="solid"
               color="#324027"
               paperColor="#f5f7f2"
               theme="dark"
               size={0.92}
+              speed={1.6}
+              bounce={0.12}
+              tilt={0}
+              intro={true}
+              draggable={false}
+              zoomOnClick={false}
               items={folderItems}
               onItemClick={(item, index) => {
                 const target = items[index];
                 if (target) {
-                  handleDownload(target);
+                  setPreview(target);
                 }
               }}
             />
+            {items.length > 3 && <button type="button" className="admin-more-files" onClick={() => {
+              setFilterCategory('All');
+              fileList.current?.scrollIntoView({ block: 'start', behavior: 'instant' });
+              fileList.current?.focus({ preventScroll: true });
+            }}>+{items.length - 3} more {items.length - 3 === 1 ? 'file' : 'files'}</button>}
           </div>
 
           <div className="admin-folder-info-card">
@@ -456,7 +482,7 @@ export default function InquiryAttachments({ reference, audience = 'admin', onEx
             )}
 
             <span className="admin-folder-hint-line">
-              Click any document in the folder to preview or download.
+              Click a document in the folder to view it. All files are listed below.
             </span>
           </div>
         </div>
@@ -464,12 +490,13 @@ export default function InquiryAttachments({ reference, audience = 'admin', onEx
 
       {/* Category Filter Chips (Only show if multiple categories exist) */}
       {items.length > 1 && presentCategories.length > 2 && (
-        <div className="admin-attachment-chips" role="tablist" aria-label="Filter documents by category">
+        <div className="admin-attachment-chips" role="group" aria-label="Filter documents by category">
           <span className="admin-chips-label"><Filter size={12} aria-hidden="true" /> Filter:</span>
           {presentCategories.map(cat => (
             <button
               type="button"
               key={cat}
+              aria-pressed={filterCategory === cat}
               className={`admin-chip-btn ${filterCategory === cat ? 'is-active' : ''}`}
               onClick={() => setFilterCategory(cat)}
             >
@@ -480,7 +507,7 @@ export default function InquiryAttachments({ reference, audience = 'admin', onEx
       )}
 
       {/* Attachments List */}
-      <div className="admin-attachments-list">
+      <div className="admin-attachments-list" ref={fileList} tabIndex={-1} aria-label="All attached files">
         {loading ? (
           <div className="admin-attachments-skeleton" aria-busy="true">
             {[1, 2].map(i => (
@@ -499,7 +526,6 @@ export default function InquiryAttachments({ reference, audience = 'admin', onEx
         ) : (
           <ul className="admin-attachments-items">
             {filteredItems.map(item => {
-              const downloadUrl = getAttachmentDownloadUrl(audience, reference, item._id);
               const isConfirming = confirmDeleteId === item._id;
               const isTeam = item.uploadedBy?.role === 'team';
 
@@ -546,17 +572,17 @@ export default function InquiryAttachments({ reference, audience = 'admin', onEx
 
                     {audience === 'admin' && (
                       isConfirming ? (
-                        <div className="admin-delete-confirm-group">
+                        <div className="admin-delete-confirm-group" role="group" aria-label={`Delete ${item.originalName}?`}>
                           <button
                             type="button"
-                            className="admin-attachment-btn is-delete-confirm"
+                            disabled={deleting} className="admin-attachment-btn is-delete-confirm"
                             onClick={() => handleDelete(item._id)}
                           >
-                            Confirm delete
+                            {deleting ? 'Deleting…' : 'Confirm delete'}
                           </button>
                           <button
                             type="button"
-                            className="admin-attachment-btn is-cancel"
+                            disabled={deleting} className="admin-attachment-btn is-cancel"
                             onClick={() => setConfirmDeleteId(null)}
                           >
                             Cancel
@@ -582,6 +608,15 @@ export default function InquiryAttachments({ reference, audience = 'admin', onEx
           </ul>
         )}
       </div>
+      {preview && <dialog ref={previewDialog} className="attachment-preview" aria-labelledby="attachment-preview-title" onCancel={() => setPreview(null)} onClick={event => { if (event.target === previewDialog.current) setPreview(null); }}>
+        <header><h3 id="attachment-preview-title">{preview.originalName}</h3><button type="button" className="chat-icon" aria-label="Close preview" onClick={() => setPreview(null)}><X size={22} /></button></header>
+        <div className="attachment-preview-body">
+          { /\.(png|jpe?g|webp)$/i.test(preview.originalName) ? <img src={`${getAttachmentDownloadUrl(audience, reference, preview._id)}?inline=1`} alt={preview.originalName} />
+            : /\.(mp3|wav)$/i.test(preview.originalName) ? <audio controls src={`${getAttachmentDownloadUrl(audience, reference, preview._id)}?inline=1`} />
+            : /\.(pdf|txt)$/i.test(preview.originalName) ? <iframe title={preview.originalName} src={`${getAttachmentDownloadUrl(audience, reference, preview._id)}?inline=1`} />
+            : <p>This file type cannot be previewed here. Use its Download button in the file list to open it on your device.</p>}
+        </div>
+      </dialog>}
     </section>
   );
 }

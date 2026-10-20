@@ -6,7 +6,7 @@ import { isAvailableDate, localDate, monthDays } from './date';
 const months = Array.from({ length: 12 }, (_, value) => ({ value, label: new Intl.DateTimeFormat('en', { month: 'long' }).format(new Date(2024, value, 1)) }));
 const formatDate = value => new Date(`${value}T12:00:00`).toLocaleDateString('en', { day: 'numeric', month: 'long', year: 'numeric' });
 
-export default function DatePicker({ value, onChange, error }) {
+export default function DatePicker({ value, onChange, error, title = "Your event date" }) {
   const dialog = useRef(null);
   const trigger = useRef(null);
   const [open, setOpen] = useState(false);
@@ -62,7 +62,7 @@ export default function DatePicker({ value, onChange, error }) {
     {open && <dialog ref={dialog} data-lenis-prevent className="booking-date-dialog" aria-labelledby="booking-date-title" onCancel={() => setOpen(false)} onClick={event => { if (event.target === dialog.current) setOpen(false); }}>
       <div className="booking-date-panel" data-lenis-prevent>
         <div className="date-sheet-handle" aria-hidden="true" />
-        <div className="date-picker-heading"><div><h3 id="booking-date-title">Your event date</h3><p>{draft ? formatDate(draft) : 'Find a day that works for you.'}</p></div><button type="button" className="date-icon-button" aria-label="Close date picker" onClick={() => setOpen(false)}><X size={20} /></button></div>
+        <div className="date-picker-heading"><div><h3 id="booking-date-title">{title}</h3><p>{draft ? formatDate(draft) : 'Find a day that works for you.'}</p></div><button type="button" className="date-icon-button" aria-label="Close date picker" onClick={() => setOpen(false)}><X size={20} /></button></div>
         <div className="date-month-controls">
           <button type="button" className="date-icon-button" disabled={!canGoBack} aria-label="Previous month" onClick={() => setView(new Date(year, month - 1, 1))}><ChevronLeft size={20} /></button>
           <Dropdown label="Month" value={month} options={months} onChange={next => setView(new Date(year, next, 1))} />

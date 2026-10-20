@@ -675,3 +675,7 @@
     transform: none !important;
   }
 }
+
+.press-lightbox { width: 100%; max-width: none; height: 100dvh; max-height: none; margin: 0; border: 0; color: var(--ink, #eeefeb); }
+.press-lightbox:not([open]) { display: none; }
+.press-lightbox::backdrop { background: #0a0c0ae0; }

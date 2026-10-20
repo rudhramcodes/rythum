@@ -86,6 +86,7 @@ function ChitralekhaFigure({ item, onOpenModal }) {
 
 const PressGrid = memo(function PressGrid({ items, preview = false }) {
   const grid = useRef(null);
+  const lightbox = useRef(null);
   const [modalImg, setModalImg] = useState(null);
   const Heading = preview ? 'h3' : 'h2';
 
@@ -134,11 +135,19 @@ const PressGrid = memo(function PressGrid({ items, preview = false }) {
   }, [items, preview]);
 
   useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (e.key === 'Escape') setModalImg(null);
+    if (!modalImg) return;
+    const element = lightbox.current;
+    const previousFocus = document.activeElement;
+    const overflow = document.body.style.overflow;
+    element.showModal();
+    document.body.style.overflow = 'hidden';
+    window.__lenis?.stop();
+    return () => {
+      element.close();
+      document.body.style.overflow = overflow;
+      window.__lenis?.start();
+      previousFocus?.focus();
     };
-    if (modalImg) window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
   }, [modalImg]);
 
   return (
@@ -195,7 +204,7 @@ const PressGrid = memo(function PressGrid({ items, preview = false }) {
       </div>
 
       {modalImg && (
-        <div className="press-lightbox" role="dialog" aria-modal="true" onClick={() => setModalImg(null)}>
+        <dialog ref={lightbox} className="press-lightbox" aria-labelledby="press-scan-caption" onCancel={() => setModalImg(null)} onClick={event => { if (event.target === lightbox.current) setModalImg(null); }}>
           <div className="press-lightbox-content" onClick={e => e.stopPropagation()}>
             <button
               type="button"
@@ -206,9 +215,9 @@ const PressGrid = memo(function PressGrid({ items, preview = false }) {
               ✕
             </button>
             <img src={modalImg.url} alt={modalImg.caption} className="press-lightbox-img" />
-            <p className="press-lightbox-caption">{modalImg.caption}</p>
+            <p id="press-scan-caption" className="press-lightbox-caption">{modalImg.caption}</p>
           </div>
-        </div>
+        </dialog>
       )}
     </>
   );

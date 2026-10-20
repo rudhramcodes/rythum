@@ -1,10 +1,11 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { ArrowDown, ArrowLeft, ArrowRight, Check, MessageCircle, RefreshCw, Send } from 'lucide-react';
+import { messagePage } from './messagePage';
 import { adminRequest } from './adminApi';
 import useRealtime from './useRealtime';
 import SmoothField from '../components/booking/SmoothField';
 
-export default function Conversation({ reference, audience, onExpired, realtime: shared, initialDraft = '', onDraftChange }) {
+export default function Conversation({ reference, audience, onExpired, realtime: shared, initialDraft = '', onDraftChange, active = true }) {
   const local = useRealtime(audience, onExpired, !shared);
   const realtime = shared || local;
   const [result, setResult] = useState({ items: [], pages: 1 });
@@ -25,26 +26,27 @@ export default function Conversation({ reference, audience, onExpired, realtime:
   const event = realtime.event;
   const update = page === 1 && (!event?.reference || event.reference === reference) ? realtime.sequence : 0;
   useEffect(() => {
+    if (!active) return;
     const controller = new AbortController();
-    adminRequest(`${path}?page=${page}`, { signal: controller.signal }).then(data => { setResult(data); setError(''); }).catch(error => {
+    adminRequest(`${path}?page=${page}`, { signal: controller.signal }).then(data => { setResult(previous => messagePage(previous, data, page)); setError(''); }).catch(error => {
       if (controller.signal.aborted) return;
       if (error.status === 401) onExpired(); else setError(error.message);
     }).finally(() => { if (!controller.signal.aborted) setLoading(false); });
     return () => controller.abort();
-  }, [path, page, refresh, onExpired, update]);
+  }, [path, page, refresh, onExpired, update, active]);
   useLayoutEffect(() => {
     const box = scroller.current;
-    if (!box) return;
+    if (!box || !active) return;
     const newest = result.items.at(-1)?.key;
     if (follow.current) box.scrollTop = box.scrollHeight;
     else if (newest && newest !== lastKey.current && page === 1) setBelow(true);
     lastKey.current = newest;
-  }, [result, page]);
+  }, [result, page, active]);
   useLayoutEffect(() => {
     if (!input.current) return;
     input.current.style.height = 'auto';
     input.current.style.height = `${Math.min(input.current.scrollHeight, 140)}px`;
-  }, [text]);
+  }, [text, active]);
   function reload(nextPage = page) { follow.current = true; setBelow(false); setLoading(true); setError(''); setPage(nextPage); setRefresh(value => value + 1); }
   function draft(value) { setText(value); onDraftChange?.(value); }
   async function send(event) {
@@ -73,12 +75,12 @@ export default function Conversation({ reference, audience, onExpired, realtime:
         const mine = message.role === ownRole;
         return <li key={`${message.role}:${message.key}`}>
           {newDay && <div className="chat-day">{day}</div>}
-          <div className={`chat-message ${mine ? 'is-mine' : 'is-theirs'}`}><span className="chat-sender">{mine ? 'You' : message.role === 'team' ? 'Rythum’s team' : 'Customer'}{!mine && audience === 'admin' && message.readByAdmin === false && <span className="chat-unread-indicator">New</span>}</span><div className="chat-bubble"><p>{message.text}</p><div className="chat-message-meta"><time dateTime={message.createdAt} title={date.toLocaleString(undefined, { hour12: true })}>{date.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit', hour12: true })}</time>{mine && <Check size={13} aria-label="Sent" />}</div></div></div>
+          <div className={`chat-message ${mine ? 'is-mine' : 'is-theirs'}${message.arriving ? ' is-arriving' : ''}`}><span className="chat-sender">{mine ? 'You' : message.role === 'team' ? 'Rythum’s team' : 'Customer'}{!mine && audience === 'admin' && message.readByAdmin === false && <span className="chat-unread-indicator">New</span>}</span><div className="chat-bubble"><p>{message.text}</p><div className="chat-message-meta"><time dateTime={message.createdAt} title={date.toLocaleString(undefined, { hour12: true })}>{date.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit', hour12: true })}</time>{mine && <Check size={13} aria-label="Sent" />}</div></div></div>
         </li>;
       })}</ol>}
     </div>
     {below && <button className="chat-new" type="button" onClick={bottom}>New messages <ArrowDown size={15} /></button>}
-    {page > 1 && <button className="chat-latest" onClick={() => reload(1)}>Back to latest messages ↓</button>}
+    {page > 1 && <button className="chat-latest" onClick={() => reload(1)}>Back to latest messages <ArrowDown size={15} aria-hidden="true" /></button>}
     {error && <div className="chat-error" role="alert">{error} <button type="button" onClick={() => reload()}>Refresh</button></div>}
     <form className="chat-compose" onSubmit={send}>
       <label className="sr-only" htmlFor={`reply-${reference}`}>{audience === 'admin' ? 'Message to customer' : 'Message to Rythum’s team'}</label>

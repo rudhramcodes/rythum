@@ -140,18 +140,50 @@ test('admin updates are private, validated, atomic and protected from stale edit
   const detail = (await agent.get(path)).body.inquiry;
   assert.equal(detail.status, 'In discussion');
   assert.equal(detail.revision, 1);
-  assert.equal(detail.history.length, 1);
-  assert.equal(detail.history[0].actor, config.ADMIN_EMAIL);
-  assert.equal(detail.history[0].note, body.note);
-  assert.equal(detail.history[0].changes.status.from, 'New');
+  assert.equal(detail.history, undefined);
+  const history = (await agent.get(`${path}/history`)).body.items;
+  assert.equal(history.length, 1);
+  assert.equal(history[0].actor, config.ADMIN_EMAIL);
+  assert.equal(history[0].note, body.note);
+  assert.equal(history[0].changes.status.from, 'New');
   const list = (await agent.get('/api/admin/inquiries')).body.items[0];
   assert.equal(list.history, undefined);
   assert.equal((await request(app).get(path)).status, 401);
   const close = await agent.post(path).set('Origin', origin).send({ ...body, revision: 1, status: 'Closed', closureReason: 'Event cancelled', note: '', followUp: '' });
   assert.equal(close.status, 200);
-  assert.equal(close.body.inquiry.history.length, 2);
+  assert.equal((await agent.get(`${path}/history`)).body.total, 2);
   assert.equal(close.body.inquiry.followUp, '');
   const noop = await agent.post(path).set('Origin', origin).send({ ...body, revision: 2, status: 'Closed', closureReason: 'Event cancelled', note: '', followUp: '' });
   assert.equal(noop.body.inquiry.revision, 2);
   assert.equal(await db.collection('notificationJobs').countDocuments({}), 0);
+});
+
+
+test('history pages are bounded, authenticated and stable across new entries; inquiry pages clamp', async () => {
+  const agent = request.agent(app);
+  await login(agent);
+  const reference = `RS-${randomUUID().toUpperCase()}`;
+  const history = Array.from({ length: 14 }, (_, id) => ({ id: String(id), at: new Date(), note: `Note ${id}`, changes: {} }));
+  await db.collection('inquiries').insertOne({ reference, idempotencyKey: randomUUID(), name: 'Test', createdAt: new Date(), history });
+  const path = `/api/admin/inquiries/${reference}/history`;
+  assert.equal((await request(app).get(path)).status, 401);
+  for (const query of ['before=-1', 'before=1.5', 'before=1001', 'limit=999']) assert.equal((await agent.get(`${path}?${query}`)).status, 400);
+  await db.collection('inquiries').updateOne({ reference }, { $push: { history: { $each: [
+    { id: 'follow-only', note: '', changes: { followUp: { from: '', to: '2027-01-01' } } },
+    { id: 'closure-only', note: '', changes: { closureReason: { from: 'Completed', to: '' } } },
+  ] } } });
+  const first = (await agent.get(path)).body;
+  assert.equal(first.total, 14);
+  assert.deepEqual(first.items.map(item => item.id), ['13', '12', '11']);
+  await db.collection('inquiries').updateOne({ reference }, { $push: { history: { id: '14', note: 'New', changes: {} } } });
+  const second = (await agent.get(`${path}?before=${first.next}`)).body;
+  assert.deepEqual(second.items.map(item => item.id), ['10', '9', '8', '7', '6']);
+  const third = (await agent.get(`${path}?before=${second.next}`)).body;
+  const last = (await agent.get(`${path}?before=${third.next}`)).body;
+  assert.deepEqual(last.items.map(item => item.id), ['0']);
+  assert.equal(last.next, null);
+  assert.deepEqual((await agent.get(`${path}?before=0`)).body.items, []);
+  const page = (await agent.get('/api/admin/inquiries?page=999')).body;
+  assert.equal(page.page, 1);
+  assert.equal(page.items.length, 1);
 });

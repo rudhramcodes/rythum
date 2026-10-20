@@ -21,7 +21,7 @@ const fields = {
 };
 const listFields = { ...fields };
 delete listFields.details;
-Object.assign(fields, { revision: 1, followUp: 1, closureReason: 1, history: 1 });
+Object.assign(fields, { revision: 1, followUp: 1, closureReason: 1 });
 const updateSchema = z.object({
   revision: z.number().int().min(0),
   status: z.enum(inquiryStatuses),
@@ -57,12 +57,38 @@ export function adminRouter({ db, auth, config, notify = () => {} }) {
       filter.$or = ['name', 'email', 'city', 'reference'].map(key => ({ [key]: search }));
     }
     const inquiries = db.collection('inquiries');
-    const [items, total, totalUnread] = await Promise.all([
-      inquiries.find(filter, { projection: listFields }).sort({ createdAt: -1, _id: -1 }).skip((page - 1) * 20).limit(20).toArray(),
+    const [total, totalUnread] = await Promise.all([
       inquiries.countDocuments(filter),
       inquiries.countDocuments({ unreadCount: { $gt: 0 } }),
     ]);
-    res.json({ items, total, totalUnread, page, pages: Math.max(1, Math.ceil(total / 20)) });
+    const pages = Math.max(1, Math.ceil(total / 20));
+    const currentPage = Math.min(page, pages);
+    const items = await inquiries.find(filter, { projection: listFields }).sort({ createdAt: -1, _id: -1 }).skip((currentPage - 1) * 20).limit(20).toArray();
+    res.json({ items, total, totalUnread, page: currentPage, pages });
+  });
+  router.get('/inquiries/:reference/history', async (req, res) => {
+    if (!/^RS-[A-F0-9-]{36}$/.test(req.params.reference)) throw new ApiError(404, 'NOT_FOUND', 'Inquiry not found.');
+    const parsed = z.object({ before: z.coerce.number().int().min(0).max(1000).optional() }).strict().safeParse(req.query);
+    if (!parsed.success) throw new ApiError(400, 'INVALID_PAGE', 'Choose a valid history page.');
+    const limit = parsed.data.before === undefined ? 3 : 5;
+    // Array positions remain stable when new events are appended during pagination.
+    const [page] = await db.collection('inquiries').aggregate([
+      { $match: { reference: req.params.reference } },
+      { $project: { history: { $filter: {
+        input: { $ifNull: ['$history', []] }, as: 'entry',
+        cond: { $or: [
+          { $ne: [{ $ifNull: ['$$entry.note', ''] }, ''] },
+          { $ne: [{ $ifNull: ['$$entry.changes.status', null] }, null] },
+        ] },
+      } } } },
+      { $set: { end: { $min: [{ $size: '$history' }, parsed.data.before ?? 1000] } } },
+      { $set: { start: { $max: [0, { $subtract: ['$end', limit] }] } } },
+      { $project: { _id: 0, total: { $size: '$history' }, next: '$start', items: {
+        $cond: [{ $gt: ['$end', 0] }, { $reverseArray: { $slice: ['$history', '$start', { $subtract: ['$end', '$start'] }] } }, []]
+      } } },
+    ]).toArray();
+    if (!page) throw new ApiError(404, 'NOT_FOUND', 'Inquiry not found.');
+    res.json({ ...page, next: page.next > 0 ? page.next : null });
   });
   router.get('/inquiries/:reference', async (req, res) => {
     if (!/^RS-[A-F0-9-]{36}$/.test(req.params.reference)) throw new ApiError(404, 'NOT_FOUND', 'Inquiry not found.');

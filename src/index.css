@@ -1403,3 +1403,7 @@ p {
     padding: 10px 16px;
   }
 }
+
+.route-loading { min-height: 100dvh; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 16px; padding: 24px; background: #161b14; color: #eeefeb; }
+.route-loading span { color: var(--accent); font-size: 18px; letter-spacing: .06em; }
+.route-loading p { font-size: 14px; }
