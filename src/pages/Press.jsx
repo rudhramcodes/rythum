@@ -22,8 +22,14 @@ export default function Press() {
 
   useEffect(() => {
     const previousTitle = document.title;
-    document.title = 'Press | Rythum Shastri';
-    return () => { document.title = previousTitle; };
+    document.title = 'Press & Media Features | Rythum Shastri · Official EPK & Reviews';
+    const canonical = document.querySelector('link[rel="canonical"]');
+    const previousHref = canonical?.getAttribute('href');
+    if (canonical) canonical.setAttribute('href', 'https://rythumshastri.com/press');
+    return () => {
+      document.title = previousTitle;
+      if (canonical && previousHref) canonical.setAttribute('href', previousHref);
+    };
   }, []);
 
   useEffect(() => {
