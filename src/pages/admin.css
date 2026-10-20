@@ -2566,3 +2566,66 @@
 .portal-chat-expanded .portal-chat-layout { flex: none; }
 .portal-chat-expanded .portal-sidebar { max-height: 90dvh; }
 .portal-chat-expanded .portal-chat-tab { flex: none; }
+
+/* Let nested workspace cards shrink to their actual available width. */
+:is(.admin-page, .portal-page) :is(.admin-workspace, .admin-detail, .admin-detail-main, .admin-detail-support, .admin-detail-disclosure, .admin-disclosure-content, .portal-chat-panel, .portal-tab-content-wrap, .portal-tab-content, .portal-detail-card, .admin-attachments-list, .admin-attachments-items, .admin-attachment-item) { min-width: 0; max-width: 100%; }
+.admin-attachments-card { container-type: inline-size; }
+.admin-attachment-fileinfo { flex: 1 1 0; max-width: 100%; }
+.admin-attachment-meta { flex: 1; }
+.admin-attachment-title-row { min-width: 0; }
+.admin-attachment-name, .admin-upload-live-name-row strong { max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
+.admin-attachment-submeta, .admin-upload-live-sub { flex-wrap: wrap; row-gap: 4px; }
+.admin-attachment-submeta > *, .admin-upload-live-sub > * { min-width: 0; overflow-wrap: anywhere; }
+.admin-attachment-actions, .admin-delete-confirm-group { flex-wrap: wrap; max-width: 100%; }
+.admin-attachment-btn { min-height: 44px; justify-content: center; max-width: 100%; }
+.admin-attachment-btn svg { flex-shrink: 0; }
+.admin-folder-stage-container { min-width: 0; max-width: 100%; }
+.admin-folder-info-top, .admin-upload-controls, .admin-upload-label-select, .admin-upload-live-info { min-width: 0; }
+.admin-attachments-header > div { min-width: 0; }
+.admin-folder-hint-line { overflow-wrap: anywhere; }
+@container (max-width: 680px) {
+  .admin-folder-showcase { flex-direction: column; align-items: stretch; padding: 20px 16px; gap: 24px; }
+  .admin-attachment-item { flex-direction: column; align-items: stretch; gap: 14px; }
+  .admin-attachment-fileinfo { flex: auto; width: 100%; align-items: flex-start; }
+  .admin-attachment-actions { width: 100%; justify-content: flex-start; }
+  .admin-upload-controls { flex-direction: column; align-items: stretch; }
+  .admin-upload-label-select .booking-dropdown { width: auto; flex: 1; min-width: 0; }
+  .admin-upload-trigger-btn { justify-content: center; white-space: normal !important; }
+}
+@container (max-width: 420px) {
+  .admin-folder-stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .admin-folder-stat-cell:last-child:nth-child(odd) { grid-column: 1 / -1; }
+  .admin-attachment-item { padding: 14px; }
+  .admin-attachment-actions > .admin-attachment-btn { flex: 1; }
+  .admin-delete-confirm-group { flex: 1 1 100%; }
+  .admin-delete-confirm-group .admin-attachment-btn { flex: 1; }
+}
+@container (max-width: 340px) {
+  .admin-folder-stage-container .folder-root { zoom: .8; }
+  .admin-upload-dropzone { padding: 18px 12px; }
+  .admin-upload-live-card { padding: 14px; }
+}
+@container (max-width: 260px) {
+  .admin-folder-stage-container .folder-root { zoom: .65; }
+  .admin-folder-stats-grid { grid-template-columns: minmax(0, 1fr); }
+}
+:is(.admin-page, .portal-page) .copy-pill { min-width: 0; }
+:is(.admin-page, .portal-page) .copy-pill-text { min-width: 0; }
+:is(.admin-page, .portal-page) .copy-pill-action { flex-shrink: 0; }
+:is(.admin-page, .portal-page) :is(.admin-account, .admin-history-meta, .admin-notice, .admin-error) { overflow-wrap: anywhere; }
+.portal-detail-grid { grid-template-columns: repeat(auto-fit, minmax(min(200px, 100%), 1fr)); }
+.portal-detail-grid dd { margin-inline-start: 0; min-width: 0; }
+.attachment-preview-body { min-width: 0; }
+.attachment-preview-body > :is(iframe, audio, img) { min-width: 0; max-width: 100%; }
+@media (max-width: 600px) {
+  .admin-page { padding-inline: 16px; }
+  .admin-attachments-card { padding: 16px; }
+  .admin-detail-heading, .admin-inbox-heading, .admin-security-heading { flex-wrap: wrap; }
+  .admin-detail-heading h2 { min-width: 0; }
+  .admin-pagination, .admin-security-actions { flex-wrap: wrap; gap: 16px; }
+  .inquiry-next-step .button { max-width: 100%; min-width: 0; }
+  .portal-detail-card { padding: 18px; }
+  .chat-toolbar { gap: 8px; }
+  .chat-connection { min-width: 0; overflow-wrap: anywhere; }
+  .chat-toolbar .chat-icon { flex-shrink: 0; }
+}
