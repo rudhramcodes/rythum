@@ -3,6 +3,7 @@ import { adminRequest } from './adminApi';
 import CopyPill from '../components/CopyPill';
 import SmoothField from '../components/booking/SmoothField';
 import Conversation from './Conversation';
+import InquiryNextStep from './InquiryNextStep';
 import InquiryAttachments from './InquiryAttachments';
 import useRealtime from './useRealtime';
 import { ArrowLeft, ArrowRight, CalendarDays, ChevronRight, LogOut, Mail, MessageCircle, RefreshCw, ShieldCheck, Paperclip } from 'lucide-react';
@@ -12,7 +13,7 @@ import './portal.css';
 
 export default function Portal() {
   const [drafts, setDrafts] = useState({});
-  const [activeTab, setActiveTab] = useState('chat');
+  const [activeTab, setActiveTab] = useState('details');
   const tabRefs = useRef({});
   const [token, setToken] = useState(() => new URLSearchParams(window.location.hash.slice(1)).get('token') || '');
   const [customer, setCustomer] = useState(null);
@@ -39,7 +40,7 @@ export default function Portal() {
   useEffect(() => {
     if (!customer) return;
     const controller = new AbortController();
-    adminRequest(`customer/inquiries?page=${page}`, { signal: controller.signal }).then(setResult).catch(error => { if (!controller.signal.aborted) { if (error.status === 401) expire(); else setError(error.message); } }).finally(() => { if (!controller.signal.aborted) setLoading(false); });
+    adminRequest(`customer/inquiries?page=${page}`, { signal: controller.signal }).then(data => { setResult(data); if (data.page && data.page !== page) setPage(data.page); setError(''); }).catch(error => { if (!controller.signal.aborted) { if (error.status === 401) expire(); else setError(error.message); } }).finally(() => { if (!controller.signal.aborted) setLoading(false); });
     return () => controller.abort();
   }, [customer, page, refresh, expire, realtime.sequence]);
   async function requestLink(event) {
@@ -62,7 +63,7 @@ export default function Portal() {
   }
 
 
-  return <main className={`portal-page ${customer && !token ? 'portal-signed-in' : ''}`}>
+  return <main className={`portal-page ${customer && !token ? 'portal-signed-in' : ''}${customer && !token && active && activeTab === 'chat' ? ' portal-chat-expanded' : ''}`}>
     <header className="portal-header"><a className="portal-home" href="/" aria-label="Back to website"><ArrowLeft size={17} /><span>Back to website</span></a><a href="/" className="portal-brand">RYTHUM SHASTRI<span>.</span></a>{customer && !token ? <button className="portal-logout" aria-label="Sign out" disabled={busy} onClick={logout}><LogOut size={16} /><span>Sign out</span></button> : <span className="portal-private"><ShieldCheck size={16} /> Private workspace</span>}</header>
     {checking ? <div className="portal-checking" role="status">Opening your workspace…</div> : !customer || token ? <div className="portal-entry">
       <div className="portal-entry-intro"><h1>Your event.<br />Our conversation.</h1><p>A direct line to Rythum’s team, from your first question to the final details.</p><a href="/#booking">Planning something new? <ArrowRight size={16} /></a></div>
@@ -76,7 +77,7 @@ export default function Portal() {
       {error && <p role="alert" className="portal-alert">{error}</p>}
       <div className={`portal-chat-layout ${active ? 'has-chat' : ''}`}>
         <aside className="portal-sidebar" aria-label="Your inquiries"><div className="portal-sidebar-heading"><h2>Conversations</h2><button className="chat-icon" disabled={loading} aria-label="Refresh inquiries" onClick={() => { setLoading(true); setRefresh(value => value + 1); }}><RefreshCw size={16} /></button></div>
-          <div className="portal-thread-list">{loading && !result.items.length ? <p role="status">Loading inquiries…</p> : result.items.map(item => <button className={`portal-thread ${active?.reference === item.reference ? 'is-selected' : ''}`} key={item.reference} aria-current={active?.reference === item.reference ? 'true' : undefined} onClick={() => { setSelected(item); setActiveTab('chat'); }}>
+          <div className="portal-thread-list">{loading && !result.items.length ? <p role="status">Loading inquiries…</p> : result.items.map(item => <button className={`portal-thread ${active?.reference === item.reference ? 'is-selected' : ''}`} key={item.reference} aria-current={active?.reference === item.reference ? 'true' : undefined} onClick={() => { setSelected(item); setActiveTab('details'); }}>
             <span className="portal-thread-top"><span className="portal-status">{item.status}</span><ChevronRight size={16} /></span><strong>{item.eventType}</strong><span>{item.city}</span><span className="portal-thread-date"><CalendarDays size={13} />{item.date ? new Date(`${item.date}T12:00:00`).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) : 'Date to be decided'}</span>
           </button>)}{!loading && !result.items.length && <div className="portal-no-inquiries"><MessageCircle size={24} /><p>No inquiries for this email yet.</p><a href="/#booking">Make an inquiry →</a></div>}</div>
           {result.pages > 1 && <div className="portal-pages"><button className="chat-icon" aria-label="Previous inquiries" disabled={loading || page === 1} onClick={() => { setLoading(true); setPage(page - 1); }}><ArrowLeft size={16} /></button><span>{page} / {result.pages}</span><button className="chat-icon" aria-label="Next inquiries" disabled={loading || page >= result.pages} onClick={() => { setLoading(true); setPage(page + 1); }}><ArrowRight size={16} /></button></div>}
@@ -97,14 +98,25 @@ export default function Portal() {
 
           {/* Apple iOS-Style Segmented Navigation Bar */}
           <div className="portal-nav-bar" role="tablist" aria-label="Inquiry Navigation" onKeyDown={event => {
-            const tabs = ['chat', 'documents', 'details'];
+            const tabs = ['details', 'chat', 'documents'];
             if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
             event.preventDefault();
             const index = tabs.indexOf(activeTab);
             const next = event.key === 'Home' ? tabs[0] : event.key === 'End' ? tabs[2] : tabs[(index + (event.key === 'ArrowRight' ? 1 : 2)) % 3];
             setActiveTab(next); tabRefs.current[next]?.focus();
           }}>
-            <div className="workspace-tabs portal-workspace-tabs" style={{ '--tab-index': ['chat', 'documents', 'details'].indexOf(activeTab) }}>
+            <div className="workspace-tabs portal-workspace-tabs workspace-tabs-three" style={{ '--tab-index': ['details', 'chat', 'documents'].indexOf(activeTab) }}>
+              <button
+                ref={el => { tabRefs.current['details'] = el; }}
+                type="button"
+                role="tab"
+                id="portal-tab-details" aria-controls="portal-panel-details" tabIndex={activeTab === 'details' ? 0 : -1}
+                aria-selected={activeTab === 'details'}
+                onClick={() => setActiveTab('details')}
+              >
+                <CalendarDays size={15} aria-hidden="true" />
+                <span>Overview</span>
+              </button>
               <button
                 ref={el => { tabRefs.current['chat'] = el; }}
                 type="button"
@@ -129,17 +141,6 @@ export default function Portal() {
                 <span>Files</span>
               </button>
 
-              <button
-                ref={el => { tabRefs.current['details'] = el; }}
-                type="button"
-                role="tab"
-                id="portal-tab-details" aria-controls="portal-panel-details" tabIndex={activeTab === 'details' ? 0 : -1}
-                aria-selected={activeTab === 'details'}
-                onClick={() => setActiveTab('details')}
-              >
-                <CalendarDays size={15} aria-hidden="true" />
-                <span>Details</span>
-              </button>
             </div>
           </div>
 
@@ -165,8 +166,9 @@ export default function Portal() {
                 />
               </div>
               <div role="tabpanel" id="portal-panel-details" aria-labelledby="portal-tab-details" hidden={activeTab !== 'details'} className="portal-tab-content portal-details-pane">
+                <InquiryNextStep status={active.status} audience="customer" onConversation={() => { setActiveTab('chat'); tabRefs.current.chat?.focus(); }} />
                 <div className="portal-detail-card">
-                  <h3>Event overview</h3><p className="booking-field-help">An inquiry is not a confirmed booking. The team will confirm arrangements with you here.</p>
+                  <h3>Event overview</h3><p className="booking-field-help">{active.status === 'Confirmed' ? 'The team has marked this booking as confirmed. Discuss any changes in the conversation.' : active.status === 'Closed' ? 'This inquiry is closed. Your details are kept here for reference.' : 'These are your requested details. The team will confirm the arrangements with you.'}</p>
                   <dl className="portal-detail-grid">
                     <div>
                       <dt>Event Type</dt>
@@ -177,7 +179,7 @@ export default function Portal() {
                       <dd>{active.city}</dd>
                     </div>
                     <div>
-                      <dt>Proposed Date</dt>
+                      <dt>{active.status === 'Confirmed' ? 'Event date' : 'Proposed date'}</dt>
                       <dd>{active.date ? new Date(`${active.date}T12:00:00`).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' }) : 'Date to be decided'}</dd>
                     </div>
                     <div>

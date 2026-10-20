@@ -19,12 +19,24 @@ export default function Conversation({ reference, audience, onExpired, realtime:
   const [below, setBelow] = useState(false);
   const attempt = useRef(null);
   const scroller = useRef(null);
+  const room = useRef(null);
   const input = useRef(null);
   const follow = useRef(true);
   const lastKey = useRef('');
   const path = `${audience}/inquiries/${reference}/messages`;
   const event = realtime.event;
   const update = page === 1 && (!event?.reference || event.reference === reference) ? realtime.sequence : 0;
+  useEffect(() => {
+    if (!active) return;
+    const frame = requestAnimationFrame(() => {
+      follow.current = true;
+      setPage(1);
+      setBelow(false);
+      if (scroller.current) scroller.current.scrollTop = scroller.current.scrollHeight;
+      room.current?.scrollIntoView({ block: 'start', behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [active, reference]);
   useEffect(() => {
     if (!active) return;
     const controller = new AbortController();
@@ -63,7 +75,7 @@ export default function Conversation({ reference, audience, onExpired, realtime:
   }
   function bottom() { follow.current = true; setBelow(false); if (scroller.current) scroller.current.scrollTop = scroller.current.scrollHeight; }
   const ownRole = audience === 'admin' ? 'team' : 'customer';
-  return <section className="chat-room" aria-label="Inquiry conversation">
+  return <section ref={room} className="chat-room" aria-label="Inquiry conversation">
     <div className="chat-toolbar"><span className={`chat-connection is-${realtime.state}`}><i aria-hidden="true" />{realtime.state === 'connected' ? 'Live updates connected' : realtime.state === 'connecting' ? 'Connecting…' : 'Reconnecting · you can still send'}</span><button className="chat-icon" type="button" aria-label="Refresh messages" disabled={loading} onClick={() => reload()}><RefreshCw size={16} /></button></div>
     <div className="chat-scroll" ref={scroller} onScroll={() => { const box = scroller.current; follow.current = box.scrollHeight - box.scrollTop - box.clientHeight < 80; if (follow.current) setBelow(false); }}>
       {result.pages > 1 && <div className="chat-history-controls"><button disabled={loading || page >= result.pages} onClick={() => reload(page + 1)}><ArrowLeft size={14} /> Older</button><span>{page === 1 ? 'Latest messages' : `History · ${page} / ${result.pages}`}</span><button disabled={loading || page === 1} onClick={() => reload(page - 1)}>Newer <ArrowRight size={14} /></button></div>}

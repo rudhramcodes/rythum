@@ -2515,3 +2515,54 @@
 .admin-private-note { margin-top: 14px; padding: 16px; border-left: 2px solid #53633e; background: #141a10; border-radius: 0 8px 8px 0; }
 .admin-followup-summary { padding: 14px 16px; border: 1px solid #343c2c; border-radius: 10px; font-size: 14px; }
 .admin-followup-summary .admin-status { margin-left: 12px; }
+
+/* Event workspaces share a clear overview, conversation and documents hierarchy. */
+.workspace-tabs-three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.workspace-tabs-three::before { width: calc((100% - 16px) / 3); transform: translateX(calc(var(--tab-index) * (100% + 4px))); }
+.inquiry-next-step { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: clamp(20px, 3vw, 32px); margin-bottom: 24px; background: #222d1b; border: 1px solid #435234; border-radius: 16px; }
+.inquiry-step-label { display: block; color: #cbd9ac; font-size: 12px; font-weight: 500; margin-bottom: 10px; }
+.inquiry-next-step h3 { font-family: var(--font-display); font-size: clamp(22px, 2.4vw, 30px); font-weight: 500; margin: 0; }
+.inquiry-next-step p { max-width: 540px; font-size: 14px; line-height: 1.7; color: #b9c5af; margin: 10px 0 0; }
+.inquiry-next-step .button { flex-shrink: 0; font-size: 14px; white-space: normal; text-align: left; }
+.admin-detail-support { grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); align-items: start; gap: 20px; }
+.admin-detail-support > .admin-history { grid-column: 1 / -1; }
+.admin-detail-support .admin-detail-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.admin-detail-support .admin-management-grid { grid-template-columns: minmax(0, 1fr); }
+.admin-work-queue { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin: 24px 0; }
+.admin-work-queue button { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; padding: 20px; text-align: left; border: 1px solid #343e2d; border-radius: 12px; background: #171d14; color: #bec9b2; cursor: pointer; transition: border-color .18s, background .18s; }
+.admin-work-queue button[aria-pressed="true"] { background: #25311d; border-color: #8d9e6b; }
+.admin-work-queue button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.admin-work-queue span { font-family: var(--font-display); font-size: 15px; }
+.admin-work-queue strong { font-family: var(--font-display); font-size: 30px; line-height: 1; font-weight: 500; color: #e6ecd9; }
+.admin-work-queue small { font-size: 11px; color: #a9b69a; }
+.admin-followup-label { display: block; margin-top: 7px; color: #cfdb9d; font-size: 12px; }
+.portal-details-pane .inquiry-next-step { flex-direction: column; align-items: flex-start; margin-bottom: 20px; }
+.portal-details-pane .portal-detail-card { border-radius: 16px; }
+@media (min-width: 1500px) {
+  .portal-details-pane { display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.2fr); gap: 20px; align-content: start; align-items: start; }
+}
+@media (max-width: 900px) {
+  .admin-detail-support { grid-template-columns: minmax(0, 1fr); }
+  .admin-work-queue { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .inquiry-next-step { align-items: flex-start; flex-direction: column; gap: 20px; }
+}
+@media (max-width: 480px) {
+  .workspace-tabs-three { width: 100%; }
+  .workspace-tabs-three button { min-width: 0; padding-inline: 8px; gap: 6px; font-size: 13px; }
+  .admin-work-queue button { padding: 16px; }
+  .admin-detail-support .admin-detail-grid { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* Expanded conversation on both desktop and mobile; only messages scroll inside. */
+.admin-detail-main .chat-room, .portal-chat-expanded .portal-chat-panel .chat-room {
+  height: 90dvh;
+  min-height: 0;
+  max-height: none;
+  flex: none;
+  scroll-margin-top: 0;
+}
+.portal-signed-in.portal-chat-expanded { height: auto; min-height: 100dvh; overflow: visible; }
+.portal-chat-expanded .portal-workspace { flex: none; }
+.portal-chat-expanded .portal-chat-layout { flex: none; }
+.portal-chat-expanded .portal-sidebar { max-height: 90dvh; }
+.portal-chat-expanded .portal-chat-tab { flex: none; }

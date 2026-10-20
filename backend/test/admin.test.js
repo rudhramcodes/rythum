@@ -187,3 +187,27 @@ test('history pages are bounded, authenticated and stable across new entries; in
   assert.equal(page.page, 1);
   assert.equal(page.items.length, 1);
 });
+
+test('work queue counts and due follow-ups exclude closed, missing and future dates', async () => {
+  const agent = request.agent(app);
+  await login(agent);
+  const examples = [
+    { status: 'New', followUp: '2026-10-19', unreadCount: 1 },
+    { status: 'In discussion', followUp: '2026-10-20' },
+    { status: 'New', followUp: '2026-10-21' },
+    { status: 'Closed', followUp: '2026-10-18' },
+    { status: 'New' },
+    { status: 'New', followUp: '' },
+  ];
+  await db.collection('inquiries').insertMany(examples.map(item => ({ ...item, reference: `RS-${randomUUID().toUpperCase()}`, idempotencyKey: randomUUID(), createdAt: new Date(), name: 'Client' })));
+  const response = await agent.get('/api/admin/inquiries?attention=followup&today=2026-10-20');
+  assert.equal(response.status, 200);
+  assert.deepEqual(response.body.queue, { all: 6, new: 4, due: 2 });
+  assert.equal(response.body.totalUnread, 1);
+  const ref = response.body.items[0].reference;
+  await agent.get(`/api/admin/inquiries/${ref}`);
+  assert.equal((await db.collection('inquiries').findOne({ reference: ref })).unreadCount, 1, 'Overview must not mark the conversation as read');
+  assert.deepEqual(response.body.items.map(item => item.followUp), ['2026-10-19', '2026-10-20']);
+  assert.equal((await agent.get('/api/admin/inquiries?today=invalid')).status, 400);
+  assert.equal((await agent.get('/api/admin/inquiries?attention=invalid')).status, 400);
+});

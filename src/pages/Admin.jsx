@@ -6,6 +6,8 @@ import SmoothField from '../components/booking/SmoothField';
 import Dropdown from '../components/booking/Dropdown';
 import CopyPill from '../components/CopyPill';
 import Conversation from './Conversation';
+import InquiryNextStep from './InquiryNextStep';
+import { localDate } from '../components/booking/date';
 import InquiryAttachments from './InquiryAttachments';
 import useRealtime from './useRealtime';
 import './portal.css';
@@ -424,11 +426,11 @@ function Security({ user, onExpired }) {
 function InquiryInbox({ onExpired, onUnreadChange, selected, navigate }) {
   const realtime = useRealtime('admin', onExpired);
   const [drafts, setDrafts] = useState({});
-  const [detailTab, setDetailTab] = useState('chat');
+  const [detailTab, setDetailTab] = useState('overview');
   const [filter, setFilter] = useState(() => {
     const query = new URLSearchParams(window.location.search);
     const page = Number(query.get('page') || 1);
-    return { q: (query.get('q') || '').slice(0, 120), status: statuses.includes(query.get('status')) ? query.get('status') : 'All', page: Number.isInteger(page) && page >= 1 && page <= 1000 ? page : 1 };
+    return { attention: query.get('attention') === 'followup' ? 'followup' : 'all', q: (query.get('q') || '').slice(0, 120), status: statuses.includes(query.get('status')) ? query.get('status') : 'All', page: Number.isInteger(page) && page >= 1 && page <= 1000 ? page : 1 };
   });
   const [result, setResult] = useState({ items: [], total: 0, totalUnread: 0, pages: 1 });
   const [busy, setBusy] = useState(true);
@@ -440,7 +442,7 @@ function InquiryInbox({ onExpired, onUnreadChange, selected, navigate }) {
 
   useEffect(() => {
     const controller = new AbortController();
-    adminRequest(`admin/inquiries?${new URLSearchParams(filter)}`, { signal: controller.signal }).then(data => {
+    adminRequest(`admin/inquiries?${new URLSearchParams({ ...filter, today: localDate() })}`, { signal: controller.signal }).then(data => {
       setResult(data);
       if (data.page !== filter.page) setFilter(current => ({ ...current, page: data.page }));
       if (typeof data.totalUnread === 'number') onUnreadChange?.(data.totalUnread);
@@ -514,13 +516,14 @@ function InquiryInbox({ onExpired, onUnreadChange, selected, navigate }) {
         </div>
         <div className="admin-detail-workspace">
           <div className="admin-detail-main">
-            <div className="workspace-tabs" data-active={detailTab} role="tablist" aria-label="Inquiry workspace" onKeyDown={event => {
+            <div className="workspace-tabs workspace-tabs-three" style={{ '--tab-index': ['overview', 'chat', 'files'].indexOf(detailTab) }} role="tablist" aria-label="Inquiry workspace" onKeyDown={event => {
+              const tabs = ['overview', 'chat', 'files'];
               if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
               event.preventDefault();
-              const next = event.key === 'Home' ? 'chat' : event.key === 'End' ? 'files' : detailTab === 'chat' ? 'files' : 'chat';
+              const next = event.key === 'Home' ? tabs[0] : event.key === 'End' ? tabs[2] : tabs[(tabs.indexOf(detailTab) + (event.key === 'ArrowRight' ? 1 : 2)) % 3];
               setDetailTab(next); document.getElementById(`admin-tab-${next}`)?.focus();
             }}>
-              {['chat', 'files'].map(tab => <button key={tab} id={`admin-tab-${tab}`} role="tab" type="button" aria-selected={detailTab === tab} aria-controls={`admin-panel-${tab}`} tabIndex={detailTab === tab ? 0 : -1} onClick={() => setDetailTab(tab)}>{tab === 'chat' ? <MessageCircle size={17} aria-hidden="true" /> : <Paperclip size={17} aria-hidden="true" />}{tab === 'chat' ? 'Chat' : 'Files'}</button>)}
+              {['overview', 'chat', 'files'].map(tab => <button key={tab} id={`admin-tab-${tab}`} role="tab" type="button" aria-selected={detailTab === tab} aria-controls={`admin-panel-${tab}`} tabIndex={detailTab === tab ? 0 : -1} onClick={() => setDetailTab(tab)}>{tab === 'overview' ? <CalendarDays size={17} aria-hidden="true" /> : tab === 'chat' ? <MessageCircle size={17} aria-hidden="true" /> : <Paperclip size={17} aria-hidden="true" />}{tab === 'overview' ? 'Overview' : tab === 'chat' ? 'Chat' : 'Files'}</button>)}
             </div>
             <div id="admin-panel-chat" role="tabpanel" aria-labelledby="admin-tab-chat" hidden={detailTab !== 'chat'}>
         <Conversation active={detailTab === 'chat'} key={`conversation-${inquiry.reference}`} reference={inquiry.reference} audience="admin" onExpired={onExpired} realtime={realtime} initialDraft={drafts[inquiry.reference] || ''} onDraftChange={value => setDrafts(current => ({ ...current, [inquiry.reference]: value }))} />
@@ -528,9 +531,10 @@ function InquiryInbox({ onExpired, onUnreadChange, selected, navigate }) {
             <div id="admin-panel-files" role="tabpanel" aria-labelledby="admin-tab-files" hidden={detailTab !== 'files'}>
         <InquiryAttachments key={`attachments-${inquiry.reference}`} reference={inquiry.reference} audience="admin" onExpired={onExpired} realtime={realtime} />
             </div>
-          </div>
+          <div id="admin-panel-overview" role="tabpanel" aria-labelledby="admin-tab-overview" hidden={detailTab !== 'overview'}>
+            <InquiryNextStep status={inquiry.status} audience="admin" onConversation={() => { setDetailTab('chat'); document.getElementById('admin-tab-chat')?.focus(); }} />
           <div className="admin-detail-support" aria-label="Event details and team actions">
-            <details className="admin-overview admin-detail-disclosure"><summary><span>Event details<small>Contact information and event brief</small></span><ChevronDown size={20} aria-hidden="true" /></summary><div className="admin-disclosure-content">
+            <details className="admin-overview admin-detail-disclosure" open><summary><span>Event details<small>Contact information and event brief</small></span><ChevronDown size={20} aria-hidden="true" /></summary><div className="admin-disclosure-content">
         <dl className="admin-detail-grid">
           {[
             ['Email', inquiry.email, true],
@@ -561,6 +565,8 @@ function InquiryInbox({ onExpired, onUnreadChange, selected, navigate }) {
             </div></details>
         <InquiryManagement key={inquiry.reference} inquiry={inquiry} onExpired={onExpired} onSaved={updated => { setInquiry(updated); setRefresh(value => value + 1); }} />
           </div>
+          </div>
+          </div>
         </div>
       </>
     )}
@@ -575,6 +581,14 @@ function InquiryInbox({ onExpired, onUnreadChange, selected, navigate }) {
       <RefreshButton busy={busy} onRefresh={handleRefresh} />
     </div>
 
+    <div className="admin-work-queue" aria-label="Work queue">
+      {[
+        ['All inquiries', 'All', 'all', result.queue?.all],
+        ['New inquiries', 'New', 'all', result.queue?.new],
+        ['Unread conversations', 'Unread', 'all', result.totalUnread],
+        ['Follow-ups due', 'All', 'followup', result.queue?.due],
+      ].map(([label, status, attention, count]) => <button type="button" key={label} aria-pressed={filter.status === status && filter.attention === attention} onClick={() => updateFilter({ q: '', status, attention, page: 1 })}><span>{label}</span><strong>{count ?? '—'}</strong>{label === 'Follow-ups due' && <small>Today and overdue · your local date</small>}</button>)}
+    </div>
     <div className="admin-toolbar">
       <form role="search" onSubmit={event => { event.preventDefault(); updateFilter({ ...filter, q: String(new FormData(event.currentTarget).get('q')).trim(), page: 1 }); }}>
         <div className="admin-search">
@@ -583,7 +597,7 @@ function InquiryInbox({ onExpired, onUnreadChange, selected, navigate }) {
             id="admin-search-input"
             name="q"
             type="text"
-            defaultValue={filter.q}
+            key={filter.q} defaultValue={filter.q}
             maxLength={120}
             autoComplete="off"
             autoCorrect="off"
@@ -604,7 +618,7 @@ function InquiryInbox({ onExpired, onUnreadChange, selected, navigate }) {
           label="Filter by status"
           value={filter.status}
           options={statuses.map(s => ({ value: s, label: s }))}
-          onChange={val => updateFilter({ ...filter, status: val, page: 1 })}
+          onChange={val => updateFilter({ ...filter, status: val, attention: 'all', page: 1 })}
         />
       </div>
     </div>
@@ -636,8 +650,8 @@ function InquiryInbox({ onExpired, onUnreadChange, selected, navigate }) {
     ) : result.items.length === 0 ? (
       <div className="admin-empty">
         <Inbox size={30} />
-        <h2>No inquiries here yet.</h2>
-        <p>New inquiries will appear here once submitted.</p>
+        <h2>No matching inquiries.</h2>
+        <p>{filter.attention === 'followup' ? 'No follow-ups are due today.' : 'Try a different search or choose All inquiries.'}</p>
       </div>
     ) : (
       <div className="admin-inquiry-list">
@@ -650,15 +664,6 @@ function InquiryInbox({ onExpired, onUnreadChange, selected, navigate }) {
               className={`admin-inquiry-row ${isUnread ? 'is-unread' : ''}`}
               key={item.reference}
               onClick={() => {
-                if (isUnread) {
-                  setResult(prev => ({
-                    ...prev,
-                    items: prev.items.map(it => it.reference === item.reference ? { ...it, unreadCount: 0 } : it),
-                    totalUnread: Math.max(0, (prev.totalUnread || 0) - unreadCount),
-                  }));
-                  onUnreadChange?.(prev => Math.max(0, (typeof prev === 'number' ? prev : 0) - unreadCount));
-                  adminRequest(`admin/inquiries/${encodeURIComponent(item.reference)}/read`, { method: 'POST', body: '{}' }).catch(() => {});
-                }
                 setInquiry(null);
                 setDetailError('');
                 navigate(`/admin/inquiry-details/${encodeURIComponent(item.reference)}?${new URLSearchParams(filter)}`);
@@ -674,7 +679,7 @@ function InquiryInbox({ onExpired, onUnreadChange, selected, navigate }) {
                     </span>
                   )}
                 </div>
-                <span className="admin-inquiry-meta">{item.eventType} · {item.city}</span>
+                <span className="admin-inquiry-meta">{item.eventType} · {item.city}</span>{item.followUp && item.status !== 'Closed' && <span className="admin-followup-label">Follow-up {formatDate(item.followUp)}{item.followUp <= localDate() ? ' · Due' : ''}</span>}
                 {item.lastMessageSnippet && (
                   <p className="admin-inquiry-snippet">
                     <span className="admin-snippet-role">{item.lastMessageRole === 'customer' ? 'Client:' : 'Team:'}</span> “{item.lastMessageSnippet}”

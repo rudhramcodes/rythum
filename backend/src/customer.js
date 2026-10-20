@@ -68,11 +68,12 @@ export function customerRouter({ db, config, notify = () => {} }) {
     const page = z.coerce.number().int().min(1).max(10000).safeParse(req.query.page || 1);
     if (!page.success) throw new ApiError(400, 'INVALID_PAGE', 'Choose a valid page.');
     const filter = { email: req.customer.email };
-    const [items, total] = await Promise.all([
-      db.collection('inquiries').find(filter, { projection: publicFields }).sort({ createdAt: -1, _id: -1 }).skip((page.data - 1) * 20).limit(20).toArray(),
-      db.collection('inquiries').countDocuments(filter),
-    ]);
-    res.json({ items, pages: Math.max(1, Math.ceil(total / 20)) });
+    const inquiries = db.collection('inquiries');
+    const total = await inquiries.countDocuments(filter);
+    const pages = Math.max(1, Math.ceil(total / 20));
+    const currentPage = Math.min(page.data, pages);
+    const items = await inquiries.find(filter, { projection: publicFields }).sort({ createdAt: -1, _id: -1 }).skip((currentPage - 1) * 20).limit(20).toArray();
+    res.json({ items, page: currentPage, pages });
   });
   router.use('/inquiries/:reference', async (req, res, next) => {
     if (!/^RS-[A-F0-9-]{36}$/.test(req.params.reference)) throw new ApiError(404, 'NOT_FOUND', 'Inquiry not found.');

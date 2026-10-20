@@ -66,7 +66,7 @@ export default function InquiryManagement({ inquiry, onSaved, onExpired }) {
     finally { setBusy(false); }
   }
   const followUpLabel = inquiry.followUp ? new Date(`${inquiry.followUp}T12:00:00`).toLocaleDateString('en', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
-  return <><details className="admin-management admin-detail-disclosure">
+  return <><details className="admin-management admin-detail-disclosure" open>
     <summary><span>Manage inquiry<small>Status, follow-up and private team notes</small></span><ChevronDown size={20} aria-hidden="true" /></summary><div className="admin-disclosure-content">
     <p className="admin-hint">Status is visible to the client. Follow-ups and notes are private to your team.</p>
     {followUpLabel && <p className="admin-followup-summary"><CalendarDays size={17} aria-hidden="true" /><span>Next follow-up: <strong>{followUpLabel}</strong>{inquiry.status !== 'Closed' && <span className="admin-status">{inquiry.followUp < localDate() ? 'Overdue' : inquiry.followUp === localDate() ? 'Today' : 'Upcoming'}</span>}</span></p>}

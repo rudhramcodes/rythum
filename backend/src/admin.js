@@ -10,13 +10,15 @@ import { ApiError } from './validation.js';
 
 export const inquiryStatuses = ['New', 'In discussion', 'Quoted', 'Confirmed', 'Closed'];
 const querySchema = z.object({
+  attention: z.enum(['all', 'followup']).default('all'),
+  today: z.iso.date().optional(),
   q: z.string().trim().max(120).default(''),
   status: z.enum(['All', 'Unread', ...inquiryStatuses]).default('All'),
   page: z.coerce.number().int().min(1).max(1000).default(1),
 }).strict();
 const fields = {
   _id: 0, reference: 1, name: 1, email: 1, phone: 1, city: 1, date: 1, timezone: 1,
-  eventType: 1, details: 1, status: 1, createdAt: 1,
+  eventType: 1, details: 1, status: 1, createdAt: 1, followUp: 1,
   unreadCount: 1, lastMessageAt: 1, lastMessageRole: 1, lastMessageSnippet: 1
 };
 const listFields = { ...fields };
@@ -45,26 +47,31 @@ export function adminRouter({ db, auth, config, notify = () => {} }) {
   router.get('/inquiries', async (req, res) => {
     const parsed = querySchema.safeParse(req.query);
     if (!parsed.success) throw new ApiError(400, 'INVALID_FILTER', 'Choose a valid search or filter.');
-    const { q, status, page } = parsed.data;
+    const { q, status, page, attention, today = new Date().toISOString().slice(0, 10) } = parsed.data;
+    const dueFilter = { status: { $ne: 'Closed' }, followUp: { $gt: '', $lte: today } };
     const filter = {};
     if (status === 'Unread') {
       filter.unreadCount = { $gt: 0 };
     } else if (status !== 'All') {
       filter.status = status;
     }
+    if (attention === 'followup') Object.assign(filter, dueFilter);
     if (q) {
       const search = { $regex: q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), $options: 'i' };
       filter.$or = ['name', 'email', 'city', 'reference'].map(key => ({ [key]: search }));
     }
     const inquiries = db.collection('inquiries');
-    const [total, totalUnread] = await Promise.all([
+    const [total, totalUnread, all, newCount, due] = await Promise.all([
       inquiries.countDocuments(filter),
       inquiries.countDocuments({ unreadCount: { $gt: 0 } }),
+      inquiries.countDocuments({}),
+      inquiries.countDocuments({ status: 'New' }),
+      inquiries.countDocuments(dueFilter),
     ]);
     const pages = Math.max(1, Math.ceil(total / 20));
     const currentPage = Math.min(page, pages);
-    const items = await inquiries.find(filter, { projection: listFields }).sort({ createdAt: -1, _id: -1 }).skip((currentPage - 1) * 20).limit(20).toArray();
-    res.json({ items, total, totalUnread, page: currentPage, pages });
+    const items = await inquiries.find(filter, { projection: listFields }).sort(attention === 'followup' ? { followUp: 1, _id: 1 } : { createdAt: -1, _id: -1 }).skip((currentPage - 1) * 20).limit(20).toArray();
+    res.json({ items, total, totalUnread, page: currentPage, pages, queue: { all, new: newCount, due } });
   });
   router.get('/inquiries/:reference/history', async (req, res) => {
     if (!/^RS-[A-F0-9-]{36}$/.test(req.params.reference)) throw new ApiError(404, 'NOT_FOUND', 'Inquiry not found.');
@@ -95,11 +102,6 @@ export function adminRouter({ db, auth, config, notify = () => {} }) {
     const inquiries = db.collection('inquiries');
     const inquiry = await inquiries.findOne({ reference: req.params.reference }, { projection: fields });
     if (!inquiry) throw new ApiError(404, 'NOT_FOUND', 'Inquiry not found.');
-    if ((inquiry.unreadCount || 0) > 0) {
-      await inquiries.updateOne({ reference: req.params.reference }, { $set: { unreadCount: 0 } });
-      await db.collection('messages').updateMany({ reference: req.params.reference, role: 'customer' }, { $set: { readByAdmin: true } });
-      inquiry.unreadCount = 0;
-    }
     res.json({ inquiry });
   });
   router.post('/inquiries/:reference', (req, res, next) => {
