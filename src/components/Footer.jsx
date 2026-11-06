@@ -1,4 +1,33 @@
-import { ArrowUpRight } from 'lucide-react';
+import { ArrowUpRight, ArrowUp } from 'lucide-react';
+
 export default function Footer({ homePrefix = '' }) {
-  return <footer className="shell site-footer"><div className="footer-top"><a href={`${homePrefix}#home`} className="wordmark">RYTHUM SHASTRI<span className="brand-period">.</span></a><div className="footer-links">{[['Instagram', 'https://instagram.com/rythum_shastri'], ['YouTube', 'https://www.youtube.com/@rythumshastri1963'], ['Spotify', 'https://open.spotify.com/artist/7Aht2xRvnv83wSBOYg3Bol'], ['Apple Music', 'https://music.apple.com/us/artist/rythum-shastri/1640653195']].map(([label, url]) => <a href={url} key={label} target="_blank" rel="noreferrer">{label}<ArrowUpRight size={13} /></a>)}</div></div><div className="footer-bottom"><a href="/portal">Your inquiries</a><p>© {new Date().getFullYear()} Rythum Shastri</p><a href={`${homePrefix}#home`}>Back to top ↑</a></div></footer>;
+  return (
+    <footer className="shell site-footer">
+      <div className="footer-top">
+        <a href={`${homePrefix}#home`} className="wordmark">
+          RYTHUM SHASTRI<span className="brand-period">.</span>
+        </a>
+        <div className="footer-links">
+          {[
+            ['Instagram', 'https://instagram.com/rythum_shastri'],
+            ['YouTube', 'https://www.youtube.com/@rythumshastri1963'],
+            ['Spotify', 'https://open.spotify.com/artist/7Aht2xRvnv83wSBOYg3Bol'],
+            ['Apple Music', 'https://music.apple.com/us/artist/rythum-shastri/1640653195'],
+          ].map(([label, url]) => (
+            <a href={url} key={label} target="_blank" rel="noreferrer">
+              {label}
+              <ArrowUpRight size={13} />
+            </a>
+          ))}
+        </div>
+      </div>
+      <div className="footer-bottom">
+        <a href="/portal">Your inquiries</a>
+        <p>© {new Date().getFullYear()} Rythum Shastri</p>
+        <a href={`${homePrefix}#home`} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+          Back to top <ArrowUp size={13} aria-hidden="true" />
+        </a>
+      </div>
+    </footer>
+  );
 }

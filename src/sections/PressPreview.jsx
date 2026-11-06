@@ -1,4 +1,4 @@
-import { ArrowUpRight } from 'lucide-react';
+import { ArrowUpRight, ArrowRight } from 'lucide-react';
 import PressGrid from '../components/PressGrid';
 import { featuredPress, pressItems } from '../data/press';
 
@@ -20,7 +20,7 @@ export default function PressPreview() {
         <PressGrid items={previewItems} preview />
         <div className="press-preview-footer">
           <a className="button button-solid press-view-all" href="/press">
-            View All Press ({pressItems.length}) →
+            View All Press ({pressItems.length}) <ArrowRight size={18} aria-hidden="true" />
           </a>
         </div>
       </div>

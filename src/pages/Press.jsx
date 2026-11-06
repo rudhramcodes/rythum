@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ArrowLeft } from 'lucide-react';
 import PressGrid from '../components/PressGrid';
 import { filterPress, pressFilters } from '../data/press';
 
@@ -63,7 +63,9 @@ export default function Press() {
 
   return (
     <div className="shell press-page">
-      <a href="/" className="text-link press-back">← Back to Home</a>
+      <a href="/" className="text-link press-back">
+        <ArrowLeft size={16} aria-hidden="true" /> Back to Home
+      </a>
       <h1 className="press-title">Press</h1>
       <p className="press-intro">Features, interviews and concert coverage.</p>
 

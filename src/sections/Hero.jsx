@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Play, Pause, Volume2, VolumeX, ArrowUpRight } from 'lucide-react';
+import { Play, Pause, Volume2, VolumeX, ArrowUpRight, ArrowDown } from 'lucide-react';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import './hero.css';
@@ -197,7 +197,7 @@ export default function Hero({ onOpenShowreel }) {
           <h2>Pure Live Stage Energy.</h2>
           <p>Bridging timeless Indian classical roots with high-voltage modern production.</p>
           <div className="hero-scroll-prompt">
-            <span>Scroll to explore</span> ↓
+            <span>Scroll to explore</span> <ArrowDown size={14} aria-hidden="true" />
           </div>
         </div>
       </div>

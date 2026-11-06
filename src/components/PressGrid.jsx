@@ -1,4 +1,5 @@
 import { memo, useEffect, useRef, useState } from 'react';
+import { ArrowRight } from 'lucide-react';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import './press.css';
@@ -185,7 +186,7 @@ const PressGrid = memo(function PressGrid({ items, preview = false }) {
                   </div>
                   {item.url && (
                     <>
-                      <span className="press-read">Read Article →</span>
+                      <span className="press-read">Read Article <ArrowRight size={14} aria-hidden="true" /></span>
                       <span id={`press-new-tab-${item.id}`} className="press-sr-only"> (opens in a new tab)</span>
                     </>
                   )}

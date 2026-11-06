@@ -103,9 +103,9 @@ export const Preloader = ({ onEnter }) => {
         <span>AUDIO SYNTHESIZER READY</span>
         <button
           onClick={handleSkip}
-          className="hover:text-[#D9A441] transition-colors underline underline-offset-4 cursor-pointer"
+          className="hover:text-[#D9A441] transition-colors underline underline-offset-4 cursor-pointer inline-flex items-center gap-1"
         >
-          SKIP TO SITE →
+          SKIP TO SITE <ArrowRight size={13} aria-hidden="true" />
         </button>
       </div>
     </div>
