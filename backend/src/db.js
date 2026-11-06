@@ -1,7 +1,9 @@
+import { prepareShows } from './shows.js';
 import { MongoClient } from 'mongodb';
 import { prepareAuthIndexes } from './auth.js';
 
 export async function prepareDatabase(db) {
+  await prepareShows(db);
   await Promise.all([
     ...['customerTokens', 'customerSessions', 'customerLinkLimits'].map(name => db.collection(name).createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 })),
     db.collection('messages').createIndex({ reference: 1, createdAt: -1, _id: -1 }),

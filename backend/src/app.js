@@ -1,3 +1,4 @@
+import { listShows } from './shows.js';
 import { randomUUID } from 'node:crypto';
 import express from 'express';
 import cors from 'cors';
@@ -40,6 +41,7 @@ export function createApp({ db, config, resetTransport }) {
   });
   app.use('/api/customer', customerRouter({ db, config, notify }));
   app.use('/api/admin', adminRouter({ db, auth, config, notify }));
+  app.get('/api/shows', async (req, res) => res.json({ items: await listShows(db) }));
   app.get('/api/health', async (req, res) => {
     await db.command({ ping: 1 });
     res.json({ status: 'ok' });

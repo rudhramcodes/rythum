@@ -1,3 +1,4 @@
+import { showsRouter } from './shows.js';
 import { eventRouter } from './eventChanges.js';
 import { existsSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
@@ -44,6 +45,7 @@ export function adminRouter({ db, auth, config, notify = () => {} }) {
     req.admin = session.user;
     next();
   });
+  router.use('/shows', showsRouter({ db, config }));
   router.get('/session', (req, res) => res.json({ user: { name: req.admin.name, email: req.admin.email } }));
   router.get('/inquiries', async (req, res) => {
     const parsed = querySchema.safeParse(req.query);

@@ -6,7 +6,7 @@ import { isAvailableDate, localDate, monthDays } from './date';
 const months = Array.from({ length: 12 }, (_, value) => ({ value, label: new Intl.DateTimeFormat('en', { month: 'long' }).format(new Date(2024, value, 1)) }));
 const formatDate = value => new Date(`${value}T12:00:00`).toLocaleDateString('en', { day: 'numeric', month: 'long', year: 'numeric' });
 
-export default function DatePicker({ value, onChange, error, id = 'booking-date', title = "Your event date" }) {
+export default function DatePicker({ value, onChange, error, id = 'booking-date', title = "Your event date", minDate = localDate(), help = "Optional · Today or a future date" }) {
   const dialog = useRef(null);
   const trigger = useRef(null);
   const [open, setOpen] = useState(false);
@@ -16,9 +16,10 @@ export default function DatePicker({ value, onChange, error, id = 'booking-date'
   const year = view.getFullYear();
   const month = view.getMonth();
   const currentYear = new Date().getFullYear();
-  const years = Array.from({ length: 101 }, (_, i) => ({ value: currentYear + i, label: String(currentYear + i) }));
+  const firstYear = Number(minDate.slice(0, 4));
+  const years = Array.from({ length: currentYear + 101 - firstYear }, (_, i) => ({ value: firstYear + i, label: String(firstYear + i) }));
   const days = monthDays(year, month);
-  const canGoBack = year > currentYear || month > new Date().getMonth();
+  const canGoBack = year > firstYear || month > Number(minDate.slice(5, 7)) - 1;
 
   useEffect(() => {
     if (!open) return;
@@ -31,8 +32,8 @@ export default function DatePicker({ value, onChange, error, id = 'booking-date'
   }, [open]);
 
   function show() {
-    const initial = isAvailableDate(value) ? value : today;
-    setDraft(isAvailableDate(value) ? value : '');
+    const initial = isAvailableDate(value, minDate) ? value : today >= minDate ? today : minDate;
+    setDraft(isAvailableDate(value, minDate) ? value : '');
     setView(new Date(`${initial}T12:00:00`));
     setOpen(true);
   }
@@ -47,7 +48,7 @@ export default function DatePicker({ value, onChange, error, id = 'booking-date'
     event.preventDefault();
     start.setDate(start.getDate() + amount);
     const next = localDate(start);
-    if (!isAvailableDate(next) || start.getFullYear() > currentYear + 100) return;
+    if (!isAvailableDate(next, minDate) || start.getFullYear() > currentYear + 100) return;
     setView(new Date(start.getFullYear(), start.getMonth(), 1));
     requestAnimationFrame(() => dialog.current?.querySelector(`[data-date="${next}"]`)?.focus());
   }
@@ -57,7 +58,7 @@ export default function DatePicker({ value, onChange, error, id = 'booking-date'
     <button id={id} ref={trigger} className={`booking-control${value ? '' : ' is-placeholder'}`} type="button" aria-haspopup="dialog" aria-expanded={open} aria-invalid={Boolean(error)} aria-describedby={error ? `${id}-error` : `${id}-help`} onClick={show}>
       {value ? formatDate(value) : 'Choose a date'}<CalendarDays size={19} />
     </button>
-    <p id={`${id}-help`} className="booking-field-help">Optional · Today or a future date</p>
+    <p id={`${id}-help`} className="booking-field-help">{help}</p>
     {error && <p id={`${id}-error`} className="booking-field-error" role="alert">{error}</p>}
     {open && <dialog ref={dialog} data-lenis-prevent className="booking-date-dialog" aria-labelledby={`${id}-title`} onCancel={() => setOpen(false)} onClick={event => { if (event.target === dialog.current) setOpen(false); }}>
       <div className="booking-date-panel" data-lenis-prevent>
@@ -71,10 +72,10 @@ export default function DatePicker({ value, onChange, error, id = 'booking-date'
         </div>
         <div className="date-calendar" role="group" aria-label={`${months[month].label} ${year}`}>
           {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((day, index) => <span className="date-weekday" key={index} aria-hidden="true">{day}</span>)}
-          {days.map((date, index) => date ? <button type="button" key={date} data-date={date} className={`date-day${draft === date ? ' is-selected' : ''}${today === date ? ' is-today' : ''}`} disabled={!isAvailableDate(date, today)} aria-label={formatDate(date)} aria-pressed={draft === date} aria-current={today === date ? 'date' : undefined} onKeyDown={event => moveDay(event, date)} onClick={() => setDraft(date)}>{Number(date.slice(-2))}</button> : <span key={`blank-${index}`} />)}
+          {days.map((date, index) => date ? <button type="button" key={date} data-date={date} className={`date-day${draft === date ? ' is-selected' : ''}${today === date ? ' is-today' : ''}`} disabled={!isAvailableDate(date, minDate)} aria-label={formatDate(date)} aria-pressed={draft === date} aria-current={today === date ? 'date' : undefined} onKeyDown={event => moveDay(event, date)} onClick={() => setDraft(date)}>{Number(date.slice(-2))}</button> : <span key={`blank-${index}`} />)}
         </div>
-        <div className="date-shortcuts"><button type="button" onClick={() => { setDraft(today); setView(new Date()); }}>Today</button><button type="button" onClick={() => { onChange(''); setOpen(false); }}>Clear date</button></div>
-        <button type="button" className="button button-solid date-done" disabled={!isAvailableDate(draft, today)} onClick={() => { if (isAvailableDate(draft)) { onChange(draft); setOpen(false); } }}>Done</button>
+        <div className="date-shortcuts"><button type="button" disabled={!isAvailableDate(today, minDate)} onClick={() => { setDraft(today); setView(new Date()); }}>Today</button><button type="button" onClick={() => { onChange(''); setOpen(false); }}>Clear date</button></div>
+        <button type="button" className="button button-solid date-done" disabled={!isAvailableDate(draft, minDate)} onClick={() => { if (isAvailableDate(draft, minDate)) { onChange(draft); setOpen(false); } }}>Done</button>
       </div>
     </dialog>}
   </div>;

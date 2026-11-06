@@ -22,3 +22,10 @@ test('calendar uses local dates, Monday first, and handles leap years and year b
   assert.equal(monthDays(2026, 11).at(-1), '2026-12-31');
   assert.equal(monthDays(2026, 12).find(Boolean), '2027-01-01');
 });
+
+ test('show calendars allow historical dates and enforce the show start as the minimum end date', () => {
+  assert.equal(isAvailableDate('2026-10-02', '1900-01-01'), true);
+  assert.equal(isAvailableDate('2026-10-02', '2026-10-02'), true);
+  assert.equal(isAvailableDate('2026-10-01', '2026-10-02'), false);
+  assert.equal(isAvailableDate('2026-02-30', '1900-01-01'), false);
+});

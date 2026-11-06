@@ -1,3 +1,4 @@
+import Shows from './Shows';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ArrowLeft, ArrowRight, Search, LogOut, RefreshCw, Eye, EyeOff, Inbox, Copy, Check, Shield, ChevronDown, MessageCircle, Paperclip, CalendarDays, MapPin } from 'lucide-react';
 import gsap from 'gsap';
@@ -715,9 +716,10 @@ function AdminNav({ screen, setScreen, unreadCount = 0 }) {
   const [shuttle, setShuttle] = useState({ left: 0, width: 0, active: false });
   const inboxRef = useRef(null);
   const securityRef = useRef(null);
+  const showsRef = useRef(null);
 
   const updateSlider = useCallback(() => {
-    const el = screen === 'inbox' ? inboxRef.current : securityRef.current;
+    const el = screen === 'inbox' ? inboxRef.current : screen === 'shows' ? showsRef.current : securityRef.current;
     if (el) {
       setSlider({
         left: el.offsetLeft,
@@ -771,6 +773,10 @@ function AdminNav({ screen, setScreen, unreadCount = 0 }) {
           )}
         </span>
       </button>
+      <button ref={showsRef} type="button" aria-current={screen === 'shows' ? 'page' : undefined} onClick={() => setScreen('shows')}
+        onMouseEnter={e => setShuttle({ left: e.currentTarget.offsetLeft, width: e.currentTarget.offsetWidth, active: true })}
+        onFocus={e => setShuttle({ left: e.currentTarget.offsetLeft, width: e.currentTarget.offsetWidth, active: true })}
+      >Shows</button>
       <button
         ref={securityRef}
         type="button"
@@ -790,10 +796,10 @@ export default function Admin() {
   const [configuration, setConfiguration] = useState(null);
   const [error, setError] = useState('');
   const [path, setPath] = useState(window.location.pathname);
-  const screen = path === '/admin/security' ? 'security' : 'inbox';
+  const screen = path === '/admin/security' ? 'security' : path === '/admin/shows' ? 'shows' : 'inbox';
   const selected = path.startsWith('/admin/inquiry-details/') ? path.slice('/admin/inquiry-details/'.length).replace(/\/$/, '') : '';
   function navigate(next) { window.history.pushState(null, '', next); setPath(window.location.pathname); }
-  function setScreen(next) { navigate(next === 'security' ? '/admin/security' : '/admin'); }
+  function setScreen(next) { navigate(next === 'inbox' ? '/admin' : `/admin/${next}`); }
   useEffect(() => {
     const sync = () => setPath(window.location.pathname);
     window.addEventListener('popstate', sync);
@@ -841,7 +847,7 @@ export default function Admin() {
     ) : !user ? <SignIn configuration={configuration} onSignIn={loadSession} /> : <>
       <header className="admin-header"><a href="/" className="admin-wordmark">RYTHUM SHASTRI<span>.</span></a><AdminNav screen={screen} setScreen={setScreen} unreadCount={unreadCount} /><button type="button" className="text-link" onClick={logout}><LogOut size={16} /> Sign out</button></header>
       <div className="admin-workspace">
-        {screen === 'security' ? (
+        {screen === 'shows' ? <Shows onExpired={expire} /> : screen === 'security' ? (
           <Security user={user} onExpired={expire} />
         ) : (
           <>
