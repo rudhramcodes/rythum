@@ -1,9 +1,10 @@
 import { ArrowUpRight } from 'lucide-react';
 const spotify = 'https://open.spotify.com/artist/7Aht2xRvnv83wSBOYg3Bol';
+
 const releases = [
-  ['Soor Shakti', '2022', 'Folk & garba', 'Traditional melodies and garba arrangements.', spotify],
-  ['Gambit', '2024', 'Techno fusion', 'Indian vocals meet electronic production, with Ridáy.', spotify],
-  ['Qaboo', '2024', 'Contemporary', 'Co-written and co-composed by Rythum Shastri.', 'https://music.apple.com/us/artist/rythum-shastri/1640653195'],
+  ['Checkmate', '2024', 'Riday, Rythum Shastri', 'Traditional melodies and garba arrangements.', 'https://open.spotify.com/track/5Mc7H48E0yjfF16OqRunlB?autoplay_ok=1'],
+  ['Gambit', '2024', 'Techno fusion', 'Indian vocals meet electronic production, with Ridáy.', 'https://open.spotify.com/track/2ByGcJy6UiS2HDsQQ34L0o?autoplay_ok=1'],
+  ['Qaboo', '2024', 'Contemporary', 'Co-written and co-composed by Rythum Shastri.', 'https://open.spotify.com/track/20EMvqfoKxsraEfIH2SlRH?autoplay_ok=1'],
 ];
 export default function MusicChapters() {
   return <section id="music" className="section shell">
